@@ -3,7 +3,8 @@
 use App\Models\User;
 
 return [
-
+    'allow_initial_admin_registration' =>env('ALLOW_INITIAL_ADMIN_REGISTRATION', false),
+    'initial_admin_setup_key' => env('INITIAL_ADMIN_SETUP_KEY'),
     /*
     |--------------------------------------------------------------------------
     | Authentication Defaults
