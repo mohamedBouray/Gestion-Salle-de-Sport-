@@ -29,23 +29,21 @@ class AuthController extends Controller
             ],
         ]);
 
-        // Prevent simultaneous first-admin registrations
-        $lock = DB::selectOne(
-            'SELECT GET_LOCK(?, 10) AS acquired',
-            ['gym_first_admin_registration']
-        );
-
+        $lock = DB::selectOne( 'SELECT GET_LOCK(?, 10) AS acquired',['gym_first_admin_registration']);
         if ((int) ($lock->acquired ?? 0) !== 1) {
-            throw new ServiceUnavailableHttpException(
-                5,
-                'Registration is temporarily busy.'
-            );
+            throw new ServiceUnavailableHttpException(5,'Registration is temporarily busy.');
         }
 
         try {
             $user = DB::transaction(function () use ($validated) {
-
                 $isFirstUser = !User::withTrashed()->exists();
+                if (!$isFirstUser) {
+                    throw ValidationException::withMessages([
+                        'registration' => [
+                            'Public registration is closed. Contact your administrator.'
+                        ],
+                    ]);
+                }
                 
                 if (
                     $isFirstUser &&
@@ -67,14 +65,10 @@ class AuthController extends Controller
                     $validated['password']
                 );
 
-                $user->role = $isFirstUser
-                    ? 'admin'
-                    : 'member';
-
+                $user->role = $isFirstUser? 'admin': 'member';
                 $user->status = 'active';
-
                 $user->save();
-
+                
                 return $user;
             });
 

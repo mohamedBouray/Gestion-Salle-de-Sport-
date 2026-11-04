@@ -1,27 +1,35 @@
-import {Routes,Route,Navigate,Outlet,} from "react-router-dom";
 
+import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
+// Public pages
 import LandingPage from "./pages/landing/LandingPage";
 import Login from "./pages/auth/login";
 import Register from "./pages/auth/register";
 import ForgotPassword from "./pages/auth/ForgotPassword";
 import ResetPassword from "./pages/auth/ResetPassword";
 
+// Dashboard UI
+import DashboardLayout from "./layouts/DashboardLayout";
+import SectionPlaceholder from "./pages/shered/SectionPlaceholder";
+
+// Dashboards
 import AdminDashboard from "./pages/admin/AdminDashboard";
+import MembersPage from "./pages/admin/MembersPage";
+import CoachesPage from "./pages/admin/CoachesPage";
+import ActivateAccount from "./pages/auth/ActivateAccount";
+
 import CoachDashboard from "./pages/coach/CoachDashboard";
 import MemberDashboard from "./pages/members/MemberDashboard";
 
-
+// Profile
 import Profile from "./pages/profile/Profile";
 
-// Dashboard paths
-const dashboards = {
-    admin: "/admin/dashboard",
-    coach: "/coach/dashboard",
-    member: "/member/dashboard",
-};
 
+// Dashboard paths
+const dashboards = { admin: "/admin/dashboard", coach: "/coach/dashboard", member: "/member/dashboard" };
+
+// Check first admin setup
 function SetupRoute() {
     const { isSetup } = useAuth();
     if (isSetup === false) {
@@ -34,15 +42,16 @@ function SetupRoute() {
 function GuestRoute() {
     const { user } = useAuth();
     if (user) {
-        return ( <Navigate to={dashboards[user.role] || "/"} replace />);
+        return (
+            <Navigate to={dashboards[user.role] || "/"} replace/>
+        );
     }
     return <Outlet />;
 }
 
-// Authenticated + correct role
+// Authenticated 
 function PrivateRoute({ requiredRole }) {
     const { user } = useAuth();
-
     if (!user) {
         return <Navigate to="/login" replace />;
     }
@@ -52,14 +61,16 @@ function PrivateRoute({ requiredRole }) {
     }
 
     if (requiredRole && user.role !== requiredRole) {
-        return ( <Navigate to={dashboards[user.role] || "/"} replace/> );
+        return (
+            <Navigate to={dashboards[user.role] || "/"} replace/>
+        );
     }
     return <Outlet />;
 }
 
+// Redirect to role dashboard
 function DashboardRedirect() {
     const { user } = useAuth();
-
     if (!user) {
         return <Navigate to="/login" replace />;
     }
@@ -68,58 +79,75 @@ function DashboardRedirect() {
     );
 }
 
+// Shared Dashboard Layout
+function RoleLayout() {
+    const { user, signOut } = useAuth();
+
+    if (!user) {
+        return <Navigate to="/login" replace />;
+    }
+    return (
+        <DashboardLayout key={user.role} role={user.role} user={user} onLogout={signOut}/>
+    );
+}
+
+// Application Routes
 function AppRoutes() {
     return (
         <Routes>
             {/* FIRST ADMIN REGISTRATION */}
-            <Route path="/register" element={ <GuestRoute /> }>
-                <Route index element={<Register />} />
+            <Route element={<GuestRoute />}>
+                <Route path="/register" element={<Register />}/>
             </Route>
             <Route path="/forgot-password" element={<ForgotPassword />}/>
             <Route path="/reset-password/:token" element={<ResetPassword />}/>
-
-            {/* APPLICATION ROUTES */}
+            <Route
+    path="/activate-account"
+    element={<ActivateAccount />}
+/>
             <Route element={<SetupRoute />}>
-                {/* PUBLIC LANDING */}
-                <Route  path="/" element={<LandingPage />}/>
-
-                {/* LOGIN */}
-                <Route element={<GuestRoute />}>
-                    <Route path="/login" element={<Login />}/>
-                </Route>
-
-                {/* DASHBOARD REDIRECT */}
+                <Route path="/" element={<LandingPage />}/>
+                <Route element={<GuestRoute />}><Route path="/login" element={<Login />}/></Route>
                 <Route path="/dashboard" element={<DashboardRedirect />}/>
+                <Route element={<PrivateRoute />}><Route path="/profile" element={<Profile />}/></Route>
 
-                {/* PROFILE - ADMIN, COACH, MEMBER */}
-                <Route element={<PrivateRoute />}>
-                    <Route path="/profile" element={<Profile />}/>
-                </Route>
-                
-                {/* ADMIN */}
-                <Route element={<PrivateRoute requiredRole="admin" />}>
-                    <Route
-                        path="/admin/dashboard"
-                        element={<AdminDashboard />}
-                    />
-                </Route>
+                {/* ADMIN ROUTES */}
+                <Route element={ <PrivateRoute requiredRole="admin" />}>
+                    <Route path="/admin" element={<RoleLayout />}>
+                    <Route index element={ <Navigate to="dashboard" replace /> }/>
+                        <Route path="dashboard" element={<AdminDashboard />}/>
+                        <Route path="members" element={<MembersPage />} />
+                        <Route path="coaches" element={<CoachesPage />} />
+                        
+                        <Route path=":section" element={<SectionPlaceholder />}/>
 
-                {/* COACH */}
-                <Route element={<PrivateRoute requiredRole="coach" />}>
-                    <Route
-                        path="/coach/dashboard"
-                        element={<CoachDashboard />}
-                    />
+
+
+
+                    </Route>
                 </Route>
 
-                {/* MEMBER */}
+                {/* COACH ROUTES */}
+                <Route element={ <PrivateRoute requiredRole="coach" />}>
+                    <Route path="/coach"element={<RoleLayout />}>
+                        <Route index element={ <Navigate to="dashboard" replace /> }/>
+                        <Route path="dashboard" element={<CoachDashboard />}/>
+                        <Route path=":section" element={<SectionPlaceholder />}/>
+
+
+                    </Route>
+                </Route>
+
+                {/* MEMBER ROUTES */}
                 <Route element={<PrivateRoute requiredRole="member" />}>
-                    <Route
-                        path="/member/dashboard"
-                        element={<MemberDashboard />}
-                    />
-                </Route>
+                    <Route path="/member" element={<RoleLayout />}>
+                        <Route index element={ <Navigate to="dashboard" replace />}/>
+                        <Route path="dashboard" element={<MemberDashboard />}/>
+                        <Route path=":section" element={<SectionPlaceholder />}/>
 
+
+                    </Route>
+                </Route>
 
                 {/* 404 */}
                 <Route path="*" element={<Navigate to="/" replace />}/>
@@ -127,6 +155,7 @@ function AppRoutes() {
         </Routes>
     );
 }
+
 
 export default function App() {
     return (

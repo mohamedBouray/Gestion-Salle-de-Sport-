@@ -1,77 +1,68 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../contexts/AuthContext";
+import { useEffect, useState } from "react";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import Sidebar from "./Sidebar";
+import Header from "./Header";
+import { ROLE_CONFIG } from "./navigation";
 
-const dashboardPaths = {
-    admin: "/admin/dashboard",
-    coach: "/coach/dashboard",
-    member: "/member/dashboard",
-};
-
-export default function DashboardLayout({ children }) {
-    const { user, logout } = useAuth();
+export default function DashboardLayout({ role = "member", user, onLogout }) {
+    const safeRole = ROLE_CONFIG[role] ? role : "member";
+    const [collapsed, setCollapsed] = useState(false);
+    const [mobileOpen, setMobileOpen] = useState(false);
+    const [loggingOut, setLoggingOut] = useState(false);
+    const { pathname } = useLocation();
     const navigate = useNavigate();
 
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
+    useEffect(() => setMobileOpen(false), [pathname]);
 
-    const handleLogout = async () => {
-        setLoading(true);
-        setError("");
+    useEffect(() => {
+        const onEscape = (e) => e.key === "Escape" && setMobileOpen(false);
+        window.addEventListener("keydown", onEscape);
+        return () => window.removeEventListener("keydown", onEscape);
+    }, []);
+
+    useEffect(() => {
+        if (!mobileOpen) return;
+        const previous = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        return () => { document.body.style.overflow = previous; };
+    }, [mobileOpen]);
+
+    async function handleLogout() {
+        if (!onLogout || loggingOut) return;
+        setLoggingOut(true);
         try {
-            await logout();
+            await onLogout();
             navigate("/login", { replace: true });
-        } catch (err) {
-            setError( err.response?.data?.message ||"Logout failed. Please try again."
-            );
+        } catch (error) {
+            console.error("Logout failed:", error);
         } finally {
-            setLoading(false);
+            setLoggingOut(false);
         }
-    };
+    }
 
     return (
-        <div className="min-h-screen bg-zinc-950 text-white">
-            <header className="border-b border-zinc-800 bg-zinc-900">
-                <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-6 py-4">
-                    <div>
-                        <h1 className="text-xl font-bold text-blue-400">
-                            GYM Management
-                        </h1>
-                        <p className="text-xs capitalize text-zinc-400">
-                            {user?.role} Space
-                        </p>
-                    </div>
+        <div className="min-h-dvh bg-white text-white">
+            {mobileOpen && (
+                <button type="button" aria-label="Fermer le menu" onClick={() => setMobileOpen(false)}
+                  className="fixed inset-0 z-40 bg-black/70 lg:hidden" />
+            )}
 
-                    <nav className="flex flex-wrap items-center gap-4">
-                        <Link to={dashboardPaths[user?.role] || "/"}
-                            className="text-sm text-zinc-300 hover:text-blue-400">
-                            Dashboard
-                        </Link>
-                        <Link to="/profile"
-                            className="text-sm text-zinc-300 hover:text-blue-400">
-                            My Profile
-                        </Link>
+            <aside className={`fixed inset-y-0 left-0 z-50 h-dvh overflow-hidden border-r border-white/10 bg-[#101827] transition-[width,transform] duration-300 ease-out motion-reduce:transition-none lg:translate-x-0 ${collapsed ? "w-[250px] lg:w-[76px]" : "w-[250px]"} ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
+                <Sidebar role={safeRole} user={user} collapsed={collapsed}
+                    onClose={() => setMobileOpen(false)}
+                    onCollapse={() => setCollapsed((v) => !v)}
+                    onLogout={handleLogout} />
+            </aside>
 
-                        <button type="button"
-                            onClick={handleLogout}
-                            disabled={loading}
-                            className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium hover:bg-red-500 disabled:opacity-50">
-                            {loading ? "Logging out..." : "Logout"}
-                        </button>
-                    </nav>
-                </div>
-            </header>
-
-            <main className="mx-auto max-w-7xl px-6 py-8">
-                {error && (
-                    <p role="alert"
-                        className="mb-5 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-400" >
-                        {error}
-                    </p>
-                )}
-
-                {children}
-            </main>
+            <div className={`min-w-0 min-h-dvh transition-[margin] duration-300 ease-out motion-reduce:transition-none ${collapsed ? "lg:ml-[76px]" : "lg:ml-[250px]"}`}>
+                <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0F1726]/95 backdrop-blur-lg">
+                    <Header role={safeRole} user={user}
+                        onMenuOpen={() => setMobileOpen(true)} onLogout={handleLogout} />
+                </header>
+                <main className="min-h-[calc(100dvh-64px)] min-w-0">
+                    <Outlet context={{ role: safeRole, user, onLogout: handleLogout }} />
+                </main>
+            </div>
         </div>
     );
 }
