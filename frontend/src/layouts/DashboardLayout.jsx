@@ -1,66 +1,102 @@
+
 import { useEffect, useState } from "react";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import {Outlet, useLocation,useNavigate,} from "react-router-dom";
+
 import Sidebar from "./Sidebar";
 import Header from "./Header";
-import { ROLE_CONFIG } from "./navigation";
+import { ROLE_CONFIG } from "./Navigation";
 
-export default function DashboardLayout({ role = "member", user, onLogout }) {
+export default function DashboardLayout({role = "member", user, onLogout,}) {
     const safeRole = ROLE_CONFIG[role] ? role : "member";
-    const [collapsed, setCollapsed] = useState(false);
+    const navigate = useNavigate();
+    const { pathname } = useLocation();
     const [mobileOpen, setMobileOpen] = useState(false);
     const [loggingOut, setLoggingOut] = useState(false);
-    const { pathname } = useLocation();
-    const navigate = useNavigate();
 
-    useEffect(() => setMobileOpen(false), [pathname]);
-
+    // Close sidebar after navigation
     useEffect(() => {
-        const onEscape = (e) => e.key === "Escape" && setMobileOpen(false);
-        window.addEventListener("keydown", onEscape);
-        return () => window.removeEventListener("keydown", onEscape);
+        setMobileOpen(false);
+    }, [pathname]);
+
+    // Escape closes mobile sidebar
+    useEffect(() => {
+        function handleEscape(event) {
+            if (event.key === "Escape") {
+                setMobileOpen(false);
+            }
+        }
+
+        window.addEventListener("keydown", handleEscape);
+
+        return () => {
+            window.removeEventListener("keydown", handleEscape);
+        };
     }, []);
 
+    // Prevent body scrolling when mobile menu is open
     useEffect(() => {
         if (!mobileOpen) return;
-        const previous = document.body.style.overflow;
+
+        const previousOverflow = document.body.style.overflow;
         document.body.style.overflow = "hidden";
-        return () => { document.body.style.overflow = previous; };
+
+        return () => {
+            document.body.style.overflow = previousOverflow;
+        };
     }, [mobileOpen]);
 
     async function handleLogout() {
         if (!onLogout || loggingOut) return;
+
         setLoggingOut(true);
+
         try {
             await onLogout();
             navigate("/login", { replace: true });
         } catch (error) {
-            console.error("Logout failed:", error);
+            console.error("Erreur de déconnexion :", error);
         } finally {
             setLoggingOut(false);
         }
     }
 
     return (
-        <div className="min-h-dvh bg-white text-white">
+        <div className="min-h-dvh bg-[#F8FAFC] text-slate-900 antialiased">
+            {/* Mobile Overlay */}
             {mobileOpen && (
-                <button type="button" aria-label="Fermer le menu" onClick={() => setMobileOpen(false)}
-                  className="fixed inset-0 z-40 bg-black/70 lg:hidden" />
+                <button type="button"
+                    aria-label="Fermer le menu"
+                    onClick={() => setMobileOpen(false)}
+                    className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-[2px] lg:hidden"/>
             )}
 
-            <aside className={`fixed inset-y-0 left-0 z-50 h-dvh overflow-hidden border-r border-white/10 bg-[#101827] transition-[width,transform] duration-300 ease-out motion-reduce:transition-none lg:translate-x-0 ${collapsed ? "w-[250px] lg:w-[76px]" : "w-[250px]"} ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}>
-                <Sidebar role={safeRole} user={user} collapsed={collapsed}
-                    onClose={() => setMobileOpen(false)}
-                    onCollapse={() => setCollapsed((v) => !v)}
-                    onLogout={handleLogout} />
+            {/* Fixed Sidebar */}
+            <aside id="dashboard-sidebar"
+                className={["fixed inset-y-0 left-0 z-50", "h-dvh w-[252px]","overflow-hidden border-r border-slate-200", "bg-white",
+                    "transition-transform duration-300 ease-out", "motion-reduce:transition-none","lg:translate-x-0",
+                    mobileOpen? "translate-x-0 shadow-2xl": "-translate-x-full",].join(" ")} >
+                <Sidebar role={safeRole} user={user} onClose={() => setMobileOpen(false)} onLogout={handleLogout} loggingOut={loggingOut}/>
             </aside>
 
-            <div className={`min-w-0 min-h-dvh transition-[margin] duration-300 ease-out motion-reduce:transition-none ${collapsed ? "lg:ml-[76px]" : "lg:ml-[250px]"}`}>
-                <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0F1726]/95 backdrop-blur-lg">
-                    <Header role={safeRole} user={user}
-                        onMenuOpen={() => setMobileOpen(true)} onLogout={handleLogout} />
+            {/* Main Workspace */}
+            <div className="min-h-dvh min-w-0 lg:ml-[252px]">
+                {/* Header */}
+                <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
+                    <Header role={safeRole}
+                        user={user}
+                        onMenuOpen={() => setMobileOpen(true)}
+                        onLogout={handleLogout}
+                        loggingOut={loggingOut}/>
                 </header>
-                <main className="min-h-[calc(100dvh-64px)] min-w-0">
-                    <Outlet context={{ role: safeRole, user, onLogout: handleLogout }} />
+
+                {/* Page Content */}
+                <main className="min-h-[calc(100dvh-68px)] min-w-0 bg-[#F8FAFC]">
+                    <Outlet
+                        context={{
+                            role: safeRole,
+                            user,
+                            onLogout: handleLogout,
+                        }}/>
                 </main>
             </div>
         </div>

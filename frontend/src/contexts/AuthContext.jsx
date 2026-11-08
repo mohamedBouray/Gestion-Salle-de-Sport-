@@ -88,8 +88,11 @@ export function AuthProvider({ children }) {
 
     // LOGOUT
     const logout = async () => {
-        await logoutUser();
-        setUser(null);
+        try {
+            await logoutUser();
+        } finally {
+            setUser(null);
+        }
     };
 
     // REFRESH AUTHENTICATED USER

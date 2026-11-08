@@ -44,7 +44,7 @@ class AccountActivationController extends Controller
                     'token' => ['Cette invitation ne correspond plus à un compte en attente.'],
                 ]);
             }
-            // User model's `password => hashed` cast hashes the new password.
+            
             $user->password = $data['password'];
             $user->status = 'active';
             $user->email_verified_at = now();

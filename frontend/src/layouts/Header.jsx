@@ -1,146 +1,290 @@
+
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
-import {
-    Bell, ChevronDown, ChevronRight, CircleHelp, CircleUserRound,
-    LogOut, Menu, Search, Settings2, X
-} from "lucide-react";
-import { getRoleConfig, getRoleItems } from "./navigation";
+import { Menu, Search, ChevronRight,ChevronDown,CircleUserRound, LogOut,X,} from "lucide-react";
 
-const iconBtn = "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500";
-const popup = "absolute right-0 top-full z-50 mt-2 w-[min(290px,calc(100vw-24px))] rounded-xl border border-white/10 bg-[#172033] p-3 shadow-2xl shadow-black/50";
+import {getRoleConfig, getRoleItems, getNavigationItem,} from "./Navigation";
 
-export default function Header({ role = "member", user, onMenuOpen, onLogout }) {
+function getInitials(name) {
+    return (name || "Gym User")
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((part) => part[0] || "")
+        .join("")
+        .toUpperCase();
+}
+
+export default function Header({ role = "member", user, onMenuOpen, onLogout, loggingOut = false,}) {
+    const navigate = useNavigate();
+    const { pathname } = useLocation();
+
     const config = getRoleConfig(role);
     const items = useMemo(() => getRoleItems(role), [role]);
-    const { pathname } = useLocation();
-    const navigate = useNavigate();
-    const [panel, setPanel] = useState(null);
+    const currentPage = getNavigationItem(role, pathname);
+
     const [searchOpen, setSearchOpen] = useState(false);
-    const [query, setQuery] = useState("");
-    const actionsRef = useRef(null);
+    const [accountOpen, setAccountOpen] = useState(false);
+    const [search, setSearch] = useState("");
+
+    const accountRef = useRef(null);
     const searchRef = useRef(null);
 
-    const current = items.find((item) => item.path === pathname);
-    const pageTitle = current?.label || (pathname === "/profile" ? "Mon profil" : "Tableau de bord");
-    const filtered = items.filter((item) => item.label.toLowerCase().includes(query.toLowerCase().trim()));
-    const initials = (user?.name || "Gym User").trim().split(/\s+/).slice(0, 2).map((name) => name[0]).join("").toUpperCase();
+    const initials = getInitials(user?.name);
+    const pageTitle = currentPage?.label || "Tableau de bord";
+
+    const results = useMemo(() => {
+        const value = search.trim().toLowerCase();
+
+        if (!value) return items;
+
+        return items.filter((item) =>
+            item.label.toLowerCase().includes(value)
+        );
+    }, [items, search]);
 
     useEffect(() => {
-        const onKey = (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
-                e.preventDefault(); setPanel(null); setSearchOpen(true);
+        function handleKeyDown(event) {
+            if (
+                (event.ctrlKey || event.metaKey) &&
+                event.key.toLowerCase() === "k"
+            ) {
+                event.preventDefault();
+                setSearchOpen(true);
+                setAccountOpen(false);
             }
-            if (e.key === "Escape") { setPanel(null); setSearchOpen(false); }
+
+            if (event.key === "Escape") {
+                setSearchOpen(false);
+                setAccountOpen(false);
+            }
+        }
+
+        window.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown);
         };
-        window.addEventListener("keydown", onKey);
-        return () => window.removeEventListener("keydown", onKey);
     }, []);
 
-    useEffect(() => { if (searchOpen) searchRef.current?.focus(); }, [searchOpen]);
-    useEffect(() => { setPanel(null); setSearchOpen(false); setQuery(""); }, [pathname]);
     useEffect(() => {
-        const outside = (e) => {
-            if (actionsRef.current && !actionsRef.current.contains(e.target)) setPanel(null);
+        if (searchOpen) {
+            searchRef.current?.focus();
+        }
+    }, [searchOpen]);
+
+    useEffect(() => {
+        setSearchOpen(false);
+        setAccountOpen(false);
+        setSearch("");
+    }, [pathname]);
+
+    useEffect(() => {
+        function handleOutsideClick(event) {
+            if (
+                accountRef.current &&
+                !accountRef.current.contains(event.target)
+            ) {
+                setAccountOpen(false);
+            }
+        }
+
+        document.addEventListener("pointerdown", handleOutsideClick);
+
+        return () => {
+            document.removeEventListener(
+                "pointerdown",
+                handleOutsideClick
+            );
         };
-        document.addEventListener("pointerdown", outside);
-        return () => document.removeEventListener("pointerdown", outside);
     }, []);
 
-    const openSearch = () => { setPanel(null); setSearchOpen(true); };
-    const closeSearch = () => { setSearchOpen(false); setQuery(""); };
-    const goTo = (path) => { navigate(path); setPanel(null); closeSearch(); };
-    const toggle = (name) => setPanel((currentPanel) => currentPanel === name ? null : name);
+    function goTo(path) {
+        setSearchOpen(false);
+        setAccountOpen(false);
+        setSearch("");
+        navigate(path);
+    }
 
-    return <>
-        <div className="flex h-16 min-w-0 items-center justify-between gap-2 px-3 sm:px-5 lg:px-6">
-            {/* Breadcrumbs */}
-            <div className="flex min-w-0 items-center gap-2">
-                <button type="button" onClick={onMenuOpen} aria-label="Ouvrir le menu"
-                    className={`${iconBtn} lg:hidden`}><Menu size={20} /></button>
-                <span className="hidden shrink-0 text-xs text-slate-500 sm:block">{config.compact}</span>
-                <ChevronRight size={14} className="hidden shrink-0 text-slate-600 sm:block" />
-                <strong className="truncate text-sm font-semibold text-white">{pageTitle}</strong>
-            </div>
-
-            <div ref={actionsRef} className="flex shrink-0 items-center gap-1 sm:gap-2">
-                {/* Quick search */}
-                <button type="button" onClick={openSearch} aria-label="Rechercher"
-                    className="hidden h-9 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 text-xs text-slate-400 hover:border-blue-500/30 md:flex md:w-40 xl:w-56">
-                    <Search size={15} /> <span className="flex-1 text-left">Rechercher...</span>
-                    <kbd className="rounded border border-white/10 px-1.5 py-0.5 text-[10px]">⌘K</kbd>
-                </button>
-                <button type="button" onClick={openSearch} aria-label="Rechercher" className={`${iconBtn} md:hidden`}><Search size={19} /></button>
-
-                {/* Help */}
-                <div className="relative hidden sm:block">
-                    <button type="button" title="Aide" onClick={() => toggle("help")} aria-expanded={panel === "help"} className={iconBtn}><CircleHelp size={19} /></button>
-                    {panel === "help" && <div className={popup}>
-                        <strong className="text-sm text-white">Aide</strong>
-                        <p className="mt-2 text-xs leading-5 text-slate-400">Utilisez le menu à gauche ou Ctrl + K pour retrouver une page.</p>
-                    </div>}
-                </div>
-
-                {/* Notifications */}
-                <div className="relative">
-                    <button type="button" aria-label="Notifications" aria-expanded={panel === "notifications"}
-                        onClick={() => toggle("notifications")} className={iconBtn}><Bell size={19} /></button>
-                    {panel === "notifications" && <div className={popup}>
-                        <strong className="text-sm text-white">Notifications</strong>
-                        <p className="mt-3 rounded-lg bg-white/[0.04] p-3 text-xs leading-5 text-slate-400">Les notifications apparaîtront après l'intégration de l'API.</p>
-                    </div>}
-                </div>
-
-                {/* User */}
-                <div className="relative ml-1 border-l border-white/10 pl-2">
-                    <button type="button" onClick={() => toggle("profile")} aria-label="Mon compte" aria-expanded={panel === "profile"}
-                        className="flex items-center gap-2 rounded-lg p-1 hover:bg-white/[0.05]">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#165DFF] text-[10px] font-bold text-white">{initials}</span>
-                        <span className="hidden max-w-32 text-left lg:block">
-                            <strong className="block truncate text-xs text-white">{user?.name || "Gym User"}</strong>
-                            <small className="block text-[10px] text-slate-500">{config.compact}</small>
-                        </span>
-                        <ChevronDown size={14} className="hidden text-slate-500 lg:block" />
+    return (
+        <>
+            <div className="flex h-[68px] min-w-0 items-center justify-between gap-3 px-4 sm:px-6">
+                {/* Left */}
+                <div className="flex min-w-0 items-center gap-3">
+                    <button
+                        type="button"
+                        onClick={onMenuOpen}
+                        aria-label="Ouvrir le menu"
+                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100 lg:hidden">
+                        <Menu size={20} />
                     </button>
-                    {panel === "profile" && <div className={popup}>
-                        <div className="border-b border-white/10 px-2 pb-3">
-                            <strong className="block truncate text-sm text-white">{user?.name || "Gym User"}</strong>
-                            <small className="block truncate text-xs text-slate-400">{user?.email}</small>
+
+                    <div className="min-w-0">
+                        <div className="hidden items-center gap-1.5 text-[11px] text-slate-400 sm:flex">
+                            <span>{config.compact}</span>
+                            <ChevronRight size={13} />
+                            <span className="truncate">{pageTitle}</span>
                         </div>
-                        <button type="button" onClick={() => goTo(`/${role}/profile`)} className="mt-2 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-slate-300 hover:bg-white/10"><CircleUserRound size={16} /> Mon profil</button>
-                        {role === "admin" && <button type="button" onClick={() => goTo("/admin/settings")} className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-xs text-slate-300 hover:bg-white/10"><Settings2 size={16} /> Paramètres</button>}
-                        <button type="button" onClick={() => { setPanel(null); onLogout?.(); }} className="mt-1 flex w-full items-center gap-2 border-t border-white/10 px-2 py-3 text-left text-xs text-white hover:bg-white/10"><LogOut size={16} /> Déconnexion</button>
-                    </div>}
+
+                        <h1 className="truncate text-[15px] font-semibold text-slate-900 sm:text-base">
+                            {pageTitle}
+                        </h1>
+                    </div>
+                </div>
+
+                {/* Right */}
+                <div className="flex shrink-0 items-center gap-2">
+                    <button type="button"
+                        onClick={() => {
+                            setAccountOpen(false);
+                            setSearchOpen(true);
+                        }}
+                        className="flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs text-slate-500 transition-colors hover:border-slate-300 hover:bg-white" aria-label="Rechercher une page">
+                        <Search size={16} />
+                        <span className="hidden md:inline">
+                            Rechercher...
+                        </span>
+                    </button>
+
+                    <span className="mx-1 hidden h-6 w-px bg-slate-200 sm:block" />
+
+                    {/* Account Dropdown */}
+                    <div ref={accountRef} className="relative">
+                        <button
+                            type="button"
+                            onClick={() => setAccountOpen((value) => !value)}
+                            aria-expanded={accountOpen}
+                            aria-label="Menu du compte"
+                            className="flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-slate-50">
+                            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-[11px] font-bold text-blue-700">
+                                {initials}
+                            </span>
+
+                            <span className="hidden max-w-32 text-left md:block">
+                                <span className="block truncate text-xs font-semibold text-slate-800">
+                                    {user?.name || "Gym User"}
+                                </span>
+                                <span className="block text-[10px] text-slate-400">
+                                    {config.compact}
+                                </span>
+                            </span>
+
+                            <ChevronDown
+                                size={14}
+                                className="hidden text-slate-400 md:block"/>
+                        </button>
+
+                        {accountOpen && (
+                            <div className="absolute right-0 top-full z-50 mt-2 w-60 overflow-hidden rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10">
+                                <div className="border-b border-slate-100 px-3 py-2.5">
+                                    <p className="truncate text-xs font-semibold text-slate-800">
+                                        {user?.name || "Gym User"}
+                                    </p>
+                                    <p className="truncate text-[11px] text-slate-500">
+                                        {user?.email || ""}
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() => goTo(`/${role}/profile`)}
+                                    className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-xs text-slate-700 hover:bg-slate-50">
+                                    <CircleUserRound size={16} />
+                                    Mon profil
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setAccountOpen(false);
+                                        onLogout?.();
+                                    }}
+                                    disabled={loggingOut}
+                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-xs text-red-600 hover:bg-red-50 disabled:opacity-50">
+                                    <LogOut size={16} />
+                                    Déconnexion
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
-        </div>
 
-        {/* Portal ensures search sits above fixed sidebar. */}
-        {searchOpen && createPortal(
-            <div className="fixed inset-0 z-[100] flex items-start justify-center bg-black/75 px-3 pt-[12vh] backdrop-blur-sm"
-                onMouseDown={(e) => { if (e.target === e.currentTarget) closeSearch(); }}>
-                <div role="dialog" aria-modal="true" aria-label="Recherche des pages"
-                    className="w-full max-w-lg overflow-hidden rounded-xl border border-white/10 bg-[#172033] shadow-2xl">
-                    <div className="flex items-center gap-3 border-b border-white/10 px-4 py-4">
-                        <Search size={19} className="text-blue-400" />
-                        <input ref={searchRef} value={query} onChange={(e) => setQuery(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === "Enter" && filtered[0]) goTo(filtered[0].path); }}
-                            type="search" placeholder="Rechercher une page..." aria-label="Rechercher une page"
-                            className="min-w-0 flex-1 bg-transparent text-sm text-white outline-none placeholder:text-slate-500" />
-                        <button type="button" onClick={closeSearch} aria-label="Fermer" className={iconBtn}><X size={18} /></button>
+            {/* Search Modal */}
+            {searchOpen && (
+                <div
+                    className="fixed inset-0 z-[100] flex items-start justify-center bg-slate-950/40 px-4 pt-[12vh] backdrop-blur-[2px]"
+                    onMouseDown={(event) => {
+                        if (event.target === event.currentTarget) {
+                            setSearchOpen(false);
+                        }
+                    }}>
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Recherche des pages"
+                        className="w-full max-w-lg overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                        <div className="flex items-center gap-3 border-b border-slate-100 px-4 py-3">
+                            <Search size={19} className="text-slate-400" />
+
+                            <input
+                                ref={searchRef}
+                                value={search}
+                                onChange={(event) =>
+                                    setSearch(event.target.value)
+                                }
+                                onKeyDown={(event) => {
+                                    if (
+                                        event.key === "Enter" &&
+                                        results[0]
+                                    ) {
+                                        goTo(results[0].path);
+                                    }
+                                }}
+                                placeholder="Rechercher une page..."
+                                className="min-w-0 flex-1 bg-transparent text-sm text-slate-800 outline-none placeholder:text-slate-400"/>
+
+                            <button
+                                type="button"
+                                onClick={() => setSearchOpen(false)}
+                                aria-label="Fermer la recherche"
+                                className="rounded-lg p-2 text-slate-400 hover:bg-slate-100">
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="max-h-[50vh] overflow-y-auto p-2">
+                            {results.length === 0 ? (
+                                <p className="p-6 text-center text-sm text-slate-500">
+                                    Aucun résultat.
+                                </p>
+                            ) : (
+                                results.map((item) => {
+                                    const Icon = item.icon;
+
+                                    return (
+                                        <button
+                                            key={item.path}
+                                            type="button"
+                                            onClick={() => goTo(item.path)}
+                                            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700">
+                                            <Icon size={17} />
+                                            <span className="flex-1">
+                                                {item.label}
+                                            </span>
+                                            <ChevronRight size={15} />
+                                        </button>
+                                    );
+                                })
+                            )}
+                        </div>
+
+                        <p className="border-t border-slate-100 px-4 py-2 text-[10px] text-slate-400">
+                            Ctrl + K pour rechercher · Échap pour fermer
+                        </p>
                     </div>
-                    <div className="max-h-[50vh] overflow-y-auto p-2">
-                        {filtered.length ? filtered.map((item) => {
-                            const Icon = item.icon;
-                            return <button type="button" key={item.path} onClick={() => goTo(item.path)}
-                                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm text-slate-300 hover:bg-blue-500/10 hover:text-white">
-                                <Icon size={17} className="text-blue-400" /><span className="flex-1">{item.label}</span><ChevronRight size={15} />
-                            </button>;
-                        }) : <p className="p-5 text-center text-sm text-slate-400">Aucun résultat.</p>}
-                    </div>
-                    <p className="border-t border-white/10 px-4 py-2 text-[10px] text-slate-500">Ctrl + K pour ouvrir · ESC pour fermer</p>
                 </div>
-            </div>, document.body
-        )}
-    </>;
+            )}
+        </>
+    );
 }

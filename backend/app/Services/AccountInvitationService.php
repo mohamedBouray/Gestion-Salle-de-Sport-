@@ -13,8 +13,7 @@ use Throwable;
 class AccountInvitationService
 {
 
-    public function send(User $user, User $admin): bool
-    {
+    public function send(User $user, User $admin): bool {
         if (!in_array($user->role, [User::MEMBER, User::COACH], true)
             || $user->status !== 'pending') {
             throw ValidationException::withMessages([

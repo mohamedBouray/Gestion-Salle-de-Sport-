@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { CheckCircle2, Dumbbell, Eye, EyeOff, LockKeyhole } from "lucide-react";
-import { invitationApi } from "../../services/invitationApi";
-import { apiError } from "../../services/memberApi";
+import { invitationApi } from "../../services/authApi";
+import { apiError } from "../../services/authApi";
 
 const inputClass = "mt-1.5 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
 

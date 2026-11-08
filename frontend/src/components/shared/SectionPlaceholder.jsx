@@ -1,6 +1,6 @@
 import { ArrowLeft, Construction } from "lucide-react";
 import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
-import { getRoleItems } from "../../layouts/navigation";
+import { getRoleItems } from "../../layouts/Navigation";
 
 export default function SectionPlaceholder() {
     const { role = "member" } = useOutletContext() || {};

@@ -1,77 +1,82 @@
 import api, { getCsrfCookie } from "./api";
 
-// CHECK FIRST ADMIN SETUP
-export const checkSetup = async () => {const response = await api.get("/api/setup-status");
-    return response.data;
-};
+const data = (response) => response.data;
 
-// GET AUTHENTICATED USER
-export const getMe = async () => { const response = await api.get("/api/me");
-    return response.data;
-};
+// ========================================
+// SETUP & AUTHENTICATION
+// ========================================
 
-// REGISTER
-export const registerUser = async (formData) => { await getCsrfCookie();
-    const response = await api.post("/api/register",
-        formData);
-         return response.data;
-};
+export const checkSetup = () =>
+    api.get("/api/setup-status").then(data);
 
-// LOGIN
-export const loginUser = async (formData) => {
+export const getMe = () =>
+    api.get("/api/me").then(data);
+
+export async function registerUser(payload) {
     await getCsrfCookie();
 
-    const response = await api.post(
-        "/api/login",
-        formData
-    );
+    return api.post("/api/register", payload).then(data);
+}
 
-    return response.data;
-};
-
-// LOGOUT
-export const logoutUser = async () => {
-    const response = await api.post("/api/logout");
-    return response.data;
-};
-
-
-
-export const forgotPassword = async (email) => {
+export async function loginUser(payload) {
     await getCsrfCookie();
 
-    const response = await api.post("/api/forgot-password", {
+    return api.post("/api/login", payload).then(data);
+}
+
+export async function logoutUser() {
+    await getCsrfCookie();
+
+    return api.post("/api/logout").then(data);
+}
+
+// ========================================
+// PASSWORD
+// ========================================
+
+export async function forgotPassword(email) {
+    await getCsrfCookie();
+
+    return api.post("/api/forgot-password", {
         email,
-    });
+    }).then(data);
+}
 
-    return response.data;
-};
-
-export const resetPassword = async (formData) => {
+export async function resetPassword(payload) {
     await getCsrfCookie();
 
-    const response = await api.post(
-        "/api/reset-password",
-        formData
-    );
+    return api.post("/api/reset-password", payload).then(data);
+}
 
-    return response.data;
+// ========================================
+// INVITATIONS
+// ========================================
+
+export async function acceptInvitation(payload) {
+    await getCsrfCookie();
+
+    return api.post("/api/accept-invitation", payload).then(data);
+}
+
+// Compatibility with existing ActivateAccount
+export const invitationApi = {
+    accept: acceptInvitation,
 };
 
+// ========================================
+// PROFILE
+// ========================================
 
-export const updateProfile = async (formData) => {
-    const response = await api.put(
-        "/api/profile",
-        formData
-    );
+export async function updateProfile(payload) {
+    await getCsrfCookie();
 
-    return response.data;
-};
+    return api.put("/api/profile", payload).then(data);
+}
 
-export const changePassword = async (formData) => {
-    const response = await api.put(
-        "/api/change-password",
-        formData
-    );
-    return response.data;
-};
+export async function changePassword(payload) {
+    await getCsrfCookie();
+
+    return api.put("/api/change-password", payload).then(data);
+}
+
+export { apiError } from "./api";

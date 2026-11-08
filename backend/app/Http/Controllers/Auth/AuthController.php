@@ -15,13 +15,17 @@ use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 class AuthController extends Controller
 {
     
-    
     public function register(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:160',
-            'email' => 'required|email|max:190|unique:users,email',
-            'phone' => 'nullable|string|max:32',
+            'name' => ['required', 'string', 'max:160'],
+            'email' => [
+                'required',
+                'email',
+                'max:190',
+                'unique:users,email',
+            ],
+            'phone' => ['nullable', 'string', 'max:32'],
             'password' => [
                 'required',
                 'confirmed',
@@ -29,49 +33,56 @@ class AuthController extends Controller
             ],
         ]);
 
-        $lock = DB::selectOne( 'SELECT GET_LOCK(?, 10) AS acquired',['gym_first_admin_registration']);
+        $lock = DB::selectOne(
+            'SELECT GET_LOCK(?, 10) AS acquired',
+            ['gym_first_admin_registration']
+        );
+
         if ((int) ($lock->acquired ?? 0) !== 1) {
-            throw new ServiceUnavailableHttpException(5,'Registration is temporarily busy.');
+            throw new ServiceUnavailableHttpException(
+                5,
+                'Registration is temporarily busy.'
+            );
         }
 
         try {
             $user = DB::transaction(function () use ($validated) {
+
                 $isFirstUser = !User::withTrashed()->exists();
-                if (!$isFirstUser) {
-                    throw ValidationException::withMessages([
-                        'registration' => [
-                            'Public registration is closed. Contact your administrator.'
-                        ],
-                    ]);
+
+                // First account: administrator
+                if ($isFirstUser) {
+                    if (!config('auth.allow_initial_admin_registration', false)) {
+                        throw ValidationException::withMessages([
+                            'registration' => [
+                                'Initial administrator setup is disabled.',
+                            ],
+                        ]);
+                    }
+
+                    $role = User::ADMIN;
+                } else {
+                    // All public registrations become members
+                    $role = User::MEMBER;
                 }
-                
-                if (
-                    $isFirstUser &&
-                    !config('auth.allow_initial_admin_registration', false)
-                ) {
-                    throw \Illuminate\Validation\ValidationException::withMessages([
-                        'registration' => [
-                            'Initial administrator setup is disabled.'
-                        ],
-                    ]);
-                }
-                
+
                 $user = new User();
 
                 $user->name = $validated['name'];
                 $user->email = $validated['email'];
                 $user->phone = $validated['phone'] ?? null;
+
                 $user->password = Hash::make(
                     $validated['password']
                 );
 
-                $user->role = $isFirstUser? 'admin': 'member';
+                $user->role = $role;
                 $user->status = 'active';
+
                 $user->save();
-                
+
                 return $user;
             });
-
         } finally {
             DB::select(
                 'SELECT RELEASE_LOCK(?)',
@@ -88,6 +99,7 @@ class AuthController extends Controller
             'user' => $this->userData($user),
         ], 201);
     }
+
 
 
 

@@ -3,27 +3,27 @@ import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
 // Public pages
-import LandingPage from "./pages/landing/LandingPage";
-import Login from "./pages/auth/login";
-import Register from "./pages/auth/register";
-import ForgotPassword from "./pages/auth/ForgotPassword";
-import ResetPassword from "./pages/auth/ResetPassword";
+import LandingPage from "./pages/Landing/LandingPage";
+import Login from "./pages/Auth/login";
+import Register from "./pages/Auth/register";
+import ForgotPassword from "./pages/Auth/ForgotPassword";
+import ResetPassword from "./pages/Auth/ResetPassword";
 
 // Dashboard UI
 import DashboardLayout from "./layouts/DashboardLayout";
-import SectionPlaceholder from "./pages/shered/SectionPlaceholder";
+import SectionPlaceholder from "./components/shared/SectionPlaceholder";
 
 // Dashboards
-import AdminDashboard from "./pages/admin/AdminDashboard";
-import MembersPage from "./pages/admin/MembersPage";
-import CoachesPage from "./pages/admin/CoachesPage";
-import ActivateAccount from "./pages/auth/ActivateAccount";
+import AdminDashboard from "./pages/Admin/AdminDashboard";
+import MembersPage from "./pages/Admin/MembersPage";
+import CoachesPage from "./pages/Admin/CoachesPage";
+import ActivateAccount from "./pages/Auth/ActivateAccount";
 
-import CoachDashboard from "./pages/coach/CoachDashboard";
-import MemberDashboard from "./pages/members/MemberDashboard";
+import CoachDashboard from "./pages/Coaches/CoachDashboard";
+import MemberDashboard from "./pages/Members/MemberDashboard";
 
 // Profile
-import Profile from "./pages/profile/Profile";
+import Profile from "./components/Profile/Profile";
 
 
 // Dashboard paths
@@ -101,10 +101,7 @@ function AppRoutes() {
             </Route>
             <Route path="/forgot-password" element={<ForgotPassword />}/>
             <Route path="/reset-password/:token" element={<ResetPassword />}/>
-            <Route
-    path="/activate-account"
-    element={<ActivateAccount />}
-/>
+            <Route path="/activate-account" element={<ActivateAccount />}/>
             <Route element={<SetupRoute />}>
                 <Route path="/" element={<LandingPage />}/>
                 <Route element={<GuestRoute />}><Route path="/login" element={<Login />}/></Route>
@@ -132,9 +129,10 @@ function AppRoutes() {
                     <Route path="/coach"element={<RoleLayout />}>
                         <Route index element={ <Navigate to="dashboard" replace /> }/>
                         <Route path="dashboard" element={<CoachDashboard />}/>
+
+
+                        
                         <Route path=":section" element={<SectionPlaceholder />}/>
-
-
                     </Route>
                 </Route>
 
