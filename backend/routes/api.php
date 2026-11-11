@@ -9,10 +9,16 @@ use App\Http\Controllers\Api\Admin\MemberController;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
+
+use App\Http\Controllers\Api\Admin\SiteSettingController;
+use App\Http\Controllers\Api\Public\SiteController;
+
+
 Route::get('/setup-status', function () {
     return response()->json(['is_setup' => User::withTrashed()->exists()]);
 })->middleware('throttle:30,1');
 
+Route::get('/site-settings', [SiteController::class, 'index'])->middleware('throttle:60,1');
 
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
@@ -40,6 +46,9 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
         Route::apiResource('admin/coaches', CoachController::class);
         Route::apiResource('admin/members', MemberController::class);
+        Route::get('/admin/site-settings', [SiteSettingController::class, 'index']);
+        Route::put('/admin/site-settings', [SiteSettingController::class, 'update']);
+        Route::post('/admin/site-settings/image', [SiteSettingController::class, 'uploadImage'])->middleware('throttle:10,1');
     });
 
 

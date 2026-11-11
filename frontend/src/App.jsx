@@ -17,6 +17,9 @@ import SectionPlaceholder from "./components/shared/SectionPlaceholder";
 import AdminDashboard from "./pages/Admin/AdminDashboard";
 import MembersPage from "./pages/Admin/MembersPage";
 import CoachesPage from "./pages/Admin/CoachesPage";
+import LandingPageSettings from "./pages/Admin/SiteSettingsPage"
+
+
 import ActivateAccount from "./pages/Auth/ActivateAccount";
 
 import CoachDashboard from "./pages/Coaches/CoachDashboard";
@@ -115,6 +118,7 @@ function AppRoutes() {
                         <Route path="dashboard" element={<AdminDashboard />}/>
                         <Route path="members" element={<MembersPage />} />
                         <Route path="coaches" element={<CoachesPage />} />
+                        <Route path="landing-page" element={<LandingPageSettings/>}/>
                         
                         <Route path=":section" element={<SectionPlaceholder />}/>
 

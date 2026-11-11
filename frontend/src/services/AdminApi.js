@@ -1,4 +1,3 @@
-
 import api, { getCsrfCookie } from "./api";
 
 const data = (res) => res.data;
@@ -85,7 +84,7 @@ const coaches = {
             throw new Error("Statut invalide.");
         }
 
-        await getCsrfCookie();
+        await csrf();
         return api.put(`/api/admin/coaches/${id}`, { status }).then(data);
     },
 
@@ -107,7 +106,38 @@ const dashboard = {
     get: () => api.get("/api/admin/dashboard").then(data),
 };
 
-export const adminApi = { dashboard, members, coaches };
+
+
+ // Landing Page Settings
+const siteSettings = {
+    get: () =>
+        api.get("/api/admin/site-settings").then(data),
+
+    async update(settings) {
+        await csrf();
+
+        return api.put("/api/admin/site-settings", {
+            settings,
+        }).then(data);
+    },
+
+    async uploadImage(key, image) {
+        await csrf();
+
+        const form = new FormData();
+        form.append("key", key);
+        form.append("image", image);
+
+        return api.post(
+            "/api/admin/site-settings/image",
+            form
+        ).then(data);
+    },
+};
+
+
+
+export const adminApi = { dashboard, members, coaches ,siteSettings};
 
 export { apiError } from "./api";
 export default adminApi;
