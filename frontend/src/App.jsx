@@ -19,12 +19,14 @@ import MembersPage from "./pages/Admin/MembersPage";
 import CoachesPage from "./pages/Admin/CoachesPage";
 import AdminCoursesPage from "./pages/Admin/CoursesPage";
 import AdminSchedulePage from "./pages/Admin/SchedulePage";
-
+import AdminReservation from "./pages/Admin/ReservationsPage";
+import AdminPresences from "./pages/Admin/AttendancePage";
 import LandingPageSettings from "./pages/Admin/SiteSettingsPage"
+// coaches 
 
+// members 
+import MemberReservation from './pages/Members/ReservationsPage';
 
-// Dashboards
-import AdminDashboard from "./pages/Admin/AdminDashboard";
 
 // Profile
 import Profile from "./components/Profile/Profile";
@@ -124,7 +126,8 @@ function AppRoutes() {
                         <Route path="coaches" element={<CoachesPage />} /> 
                         <Route path="classes" element={<AdminCoursesPage />} />
                         <Route path="schedule" element={<AdminSchedulePage />} />
-
+                        <Route path="reservations" element={<AdminReservation />} />
+                        <Route path="attendance" element={<AdminPresences/>}/>
 
 
                         <Route path="landing-page" element={<LandingPageSettings/>}/>
@@ -148,9 +151,9 @@ function AppRoutes() {
                 <Route element={<PrivateRoute requiredRole="member" />}>
                     <Route path="/member" element={<RoleLayout />}>
                         <Route index element={ <Navigate to="dashboard" replace />}/>
+                        <Route  path="reservations" element={<MemberReservation/>}/>
 
                         <Route path="profile" element={<Profile />} />
-
                         <Route path=":section" element={<SectionPlaceholder />}/>
 
 

@@ -14,6 +14,10 @@ use App\Http\Controllers\Api\Public\SiteController;
 use App\Http\Controllers\Api\Admin\MessageController;
 use App\Http\Controllers\Api\Admin\CoachController;
 use App\Http\Controllers\Api\Admin\MemberController;
+
+use App\Http\Controllers\Api\Admin\ReservationController as AdminReservationController;
+use App\Http\Controllers\Api\Members\ReservationController as MemberReservationController;
+
 use App\Http\Controllers\Api\Admin\SiteSettingController;
 
 
@@ -66,6 +70,29 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         // ==========================================
         Route::get('/admin/coaches/{coach}/availabilities',[\App\Http\Controllers\Api\Admin\CoachAvailabilityController::class,'index'] )->name('admin.coaches.availabilities.index');
 
+        // Reservation 
+        Route::get('/admin/reservations',[AdminReservationController::class, 'index']);
+        Route::get('/admin/reservations/{reservation}',[AdminReservationController::class, 'show']);
+        Route::get('/admin/course-sessions/{session}/reservations',[AdminReservationController::class, 'bySession']);
+        Route::post('/admin/course-sessions/{session}/reservations',[AdminReservationController::class, 'store'] )->middleware('throttle:20,1');
+
+
+
+        // ==========================================
+        // ADMIN - GESTION DES PRESENCES
+        // MEMBERS + COACHES
+        // ==========================================
+
+        Route::get('/admin/attendance/summary',[\App\Http\Controllers\Api\Admin\AttendanceController::class, 'summary']);
+        Route::get('/admin/attendance/members', [\App\Http\Controllers\Api\Admin\AttendanceController::class, 'members']);
+        Route::get('/admin/attendance/coaches',[\App\Http\Controllers\Api\Admin\AttendanceController::class, 'coaches']);
+        Route::post('/admin/attendance/members/check-in', [\App\Http\Controllers\Api\Admin\AttendanceController::class, 'memberCheckIn'])->middleware('throttle:30,1');
+        Route::post('/admin/attendance/coaches/check-in', [\App\Http\Controllers\Api\Admin\AttendanceController::class, 'coachCheckIn'])->middleware('throttle:30,1');
+        Route::patch('/admin/attendance/members/{attendance}/check-out', [\App\Http\Controllers\Api\Admin\AttendanceController::class, 'memberCheckOut'])->middleware('throttle:30,1');
+        Route::patch('/admin/attendance/coaches/{attendance}/check-out',[\App\Http\Controllers\Api\Admin\AttendanceController::class, 'coachCheckOut'])->middleware('throttle:30,1');
+        Route::post('/admin/attendance/coaches/absences',[\App\Http\Controllers\Api\Admin\AttendanceController::class, 'coachAbsence']) ->middleware('throttle:30,1');
+
+        
         // landing Page parametrages
         Route::get('/admin/site-settings', [SiteSettingController::class, 'index']);
         Route::put('/admin/site-settings', [SiteSettingController::class, 'update']);
@@ -82,5 +109,10 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     });
 
     Route::middleware('role:member')->group(function () {
+        // RESERVATIONS 
+        Route::get('/member/reservations',[MemberReservationController::class, 'index'] );
+        Route::get('/member/course-sessions',[MemberReservationController::class, 'sessions']);
+        Route::post('/member/course-sessions/{session}/reservations',[MemberReservationController::class, 'store'])->middleware('throttle:20,1');
+        Route::delete('/member/reservations/{reservation}',[MemberReservationController::class, 'destroy'] )->middleware('throttle:20,1');
     });
 });
