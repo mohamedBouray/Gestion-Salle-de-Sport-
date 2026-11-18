@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password as PasswordRule;
@@ -47,6 +48,8 @@ class PasswordResetController extends Controller
                 $user->password = Hash::make($password);
                 $user->setRememberToken(Str::random(60));
                 $user->save();
+                // With SESSION_DRIVER=database, revoke existing sessions after reset.
+                DB::table('sessions')->where('user_id', $user->id)->delete();
 
                 event(new PasswordReset($user));
             }

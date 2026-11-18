@@ -16,10 +16,9 @@ function FeatureIcon({ name }) {
 export default function Architecture() {
     const s = useLandingSettings();
     return (
-        <section id="features" className="scroll-mt-24 bg-[#F7F9FF] px-5 py-10 sm:px-8 lg:px-10">
+        <section id="features" className="scroll-mt-30 bg-[#F7F9FF] px-3 py-6 sm:px-3 lg:px-3">
             <div className="mx-auto max-w-[1200px]">
                 <div className="mx-auto mb-12 max-w-[680px] text-center sm:mb-14">
-                    <span className="inline-flex rounded-full border border-blue-100 bg-blue-50 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-blue-600">{s.features_badge}</span>
                     <h2 className="mt-5 text-[27px] font-extrabold leading-tight tracking-tight text-[#0F2037] sm:text-[32px] lg:text-[36px]">{s.features_title}</h2>
                     <p className="mx-auto mt-5 max-w-[590px] text-[14px] leading-[1.8] text-slate-500 sm:text-[15px]">{s.features_subtitle}</p>
                 </div>

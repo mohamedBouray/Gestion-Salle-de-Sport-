@@ -4,14 +4,19 @@ import { adminApi } from "../../../services/AdminApi";
 import { apiError } from "../../../services/api";
 
 const days = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
-const labels = { active: "Actif", pending: "En attente", inactive: "Inactif" };
+const labels = { active: "Actif", pending: "En attente", inactive: "Bloqué" };
+const colors = {
+    active: "bg-emerald-50 text-emerald-700 ring-emerald-600/15",
+    pending: "bg-amber-50 text-amber-700 ring-amber-600/15",
+    inactive: "bg-red-50 text-red-700 ring-red-600/15",
+};
 
 function Counter({ title, value, icon: Icon }) {
     return (
-        <div className="rounded-xl border border-slate-200 p-3 text-center">
-            <Icon size={20} className="mx-auto mb-2 text-blue-600" />
-            <strong className="block text-xl">{value ?? 0}</strong>
-            <span className="text-xs text-slate-500">{title}</span>
+        <div className="rounded-lg border border-slate-200 bg-white p-3 text-center">
+            <Icon size={17} className="mx-auto mb-1.5 text-blue-600" />
+            <strong className="block text-lg leading-none">{value ?? 0}</strong>
+            <span className="mt-1 block text-[11px] text-slate-500">{title}</span>
         </div>
     );
 }
@@ -39,78 +44,136 @@ export default function CoachDetails({ coachId, onClose }) {
     }, [onClose]);
 
     return (
-        <div className="fixed inset-0 z-[100] bg-slate-950/50"
-            onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-            <aside role="dialog" aria-modal="true" aria-label="Détails du coach"
-                className="absolute inset-y-0 right-0 w-full max-w-xl overflow-y-auto bg-white shadow-xl">
-
-                <header className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-5 py-4">
-                    <h2 className="text-lg font-bold">Détails du coach</h2>
-                    <button type="button" onClick={onClose} aria-label="Fermer"
-                        className="rounded-lg p-2 hover:bg-slate-100">
-                        <X size={20} />
+        <div
+            className="fixed inset-0 z-[100] bg-slate-950/50"
+            onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+        >
+            <aside
+                role="dialog"
+                aria-modal="true"
+                aria-label="Détails du coach"
+                className="absolute inset-y-0 right-0 w-full max-w-md overflow-y-auto bg-white shadow-xl"
+            >
+                <header className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-5 py-3.5">
+                    <h2 className="text-base font-bold">Détails du coach</h2>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        aria-label="Fermer"
+                        className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100"
+                    >
+                        <X size={18} />
                     </button>
                 </header>
 
                 <div className="space-y-4 p-5">
                     {error && (
-                        <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>
+                        <p role="alert" className="rounded-lg border border-red-100 bg-red-50 p-3 text-[13px] text-red-700">
+                            {error}
+                        </p>
                     )}
+
                     {!coach && !error && (
                         <p className="text-sm text-slate-500">Chargement...</p>
                     )}
 
                     {coach && (
                         <>
-                            <section className="rounded-xl bg-slate-50 p-4">
+                            {/* Profile */}
+                            <section>
                                 <div className="flex items-center gap-3">
                                     {coach.profile?.photo_url ? (
-                                        <img src={coach.profile.photo_url} alt={coach.name}
-                                            className="h-16 w-16 rounded-xl object-cover" />
+                                        <img
+                                            src={coach.profile.photo_url}
+                                            alt={coach.name}
+                                            className="h-14 w-14 rounded-full object-cover"
+                                        />
                                     ) : (
-                                        <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-blue-100 text-xl font-bold text-blue-700">
-                                            {coach.name?.[0]}
+                                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-lg font-bold text-blue-600">
+                                            {coach.name?.[0]?.toUpperCase()}
                                         </div>
                                     )}
 
                                     <div className="min-w-0">
-                                        <h3 className="font-bold text-slate-900">{coach.name}</h3>
-                                        <p className="break-all text-sm text-slate-500">{coach.email}</p>
-                                        <span className="text-xs font-medium text-blue-600">
+                                        <h3 className="truncate font-bold text-slate-900">
+                                            {coach.name}
+                                        </h3>
+                                        <p className="break-all text-xs text-slate-500">
+                                            {coach.email}
+                                        </p>
+                                        <span
+                                            className={`mt-1.5 inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset ${
+                                                colors[coach.status] || "bg-slate-100 text-slate-600 ring-slate-500/15"
+                                            }`}
+                                        >
                                             {labels[coach.status] || coach.status}
                                         </span>
                                     </div>
                                 </div>
 
-                                <p className="mt-4 text-sm text-slate-700">
-                                    {coach.profile?.specialty || "Spécialité non définie"} · {coach.profile?.experience_years ?? 0} ans d'expérience
-                                </p>
-                                <p className="mt-2 whitespace-pre-line text-sm text-slate-600">
+                                <dl className="mt-4 divide-y divide-slate-100 rounded-lg border border-slate-200 text-[13px]">
+                                    <div className="flex justify-between gap-3 px-3 py-2">
+                                        <dt className="text-slate-500">Spécialité</dt>
+                                        <dd className="text-right font-medium text-slate-800">
+                                            {coach.profile?.specialty || "Non définie"}
+                                        </dd>
+                                    </div>
+                                    <div className="flex justify-between gap-3 px-3 py-2">
+                                        <dt className="text-slate-500">Expérience</dt>
+                                        <dd className="font-medium text-slate-800">
+                                            {coach.profile?.experience_years ?? 0} ans
+                                        </dd>
+                                    </div>
+                                    <div className="flex justify-between gap-3 px-3 py-2">
+                                        <dt className="text-slate-500">Téléphone</dt>
+                                        <dd className="font-medium text-slate-800">
+                                            {coach.phone || "—"}
+                                        </dd>
+                                    </div>
+                                    <div className="flex justify-between gap-3 px-3 py-2">
+                                        <dt className="text-slate-500">Landing Page</dt>
+                                        <dd className="font-medium text-slate-800">
+                                            {coach.profile?.is_featured ? "Oui" : "Non"}
+                                        </dd>
+                                    </div>
+                                </dl>
+
+                                <p className="mt-3 whitespace-pre-line text-[13px] leading-6 text-slate-600">
                                     {coach.profile?.bio || "Aucune biographie."}
-                                </p>
-                                <p className="mt-3 text-xs text-slate-500">
-                                    Téléphone : {coach.phone || "—"} · Landing Page : {coach.profile?.is_featured ? "Oui" : "Non"}
                                 </p>
                             </section>
 
+                            {/* Counters */}
                             <div className="grid grid-cols-3 gap-2">
                                 <Counter title="Cours" value={coach.coached_courses_count} icon={Dumbbell} />
                                 <Counter title="Séances" value={coach.coached_sessions_count} icon={CalendarDays} />
-                                <Counter title="Demandes privées" value={coach.received_requests_count} icon={UserRoundCheck} />
+                                <Counter title="Demandes" value={coach.received_requests_count} icon={UserRoundCheck} />
                             </div>
 
-                            <section className="rounded-xl border border-slate-200 p-4">
-                                <h3 className="mb-3 text-sm font-semibold">Disponibilités hebdomadaires</h3>
+                            {/* Availabilities */}
+                            <section className="rounded-lg border border-slate-200">
+                                <h3 className="border-b border-slate-200 px-3 py-2.5 text-[13px] font-bold">
+                                    Disponibilités hebdomadaires
+                                </h3>
 
                                 {coach.coach_availabilities?.length ? (
-                                    coach.coach_availabilities.map((slot) => (
-                                        <div key={slot.id} className="flex justify-between gap-3 border-b py-2 text-sm last:border-0">
-                                            <span>{days[slot.day_of_week] ?? `Jour ${slot.day_of_week}`}</span>
-                                            <span className="text-slate-500">{slot.start_time} – {slot.end_time}</span>
-                                        </div>
-                                    ))
+                                    <div className="divide-y divide-slate-100 px-3">
+                                        {coach.coach_availabilities.map((slot) => (
+                                            <div
+                                                key={slot.id}
+                                                className="flex justify-between gap-3 py-2 text-[13px]"
+                                            >
+                                                <span>{days[slot.day_of_week] ?? `Jour ${slot.day_of_week}`}</span>
+                                                <span className="tabular-nums text-slate-500">
+                                                    {slot.start_time} – {slot.end_time}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
                                 ) : (
-                                    <p className="text-sm text-slate-500">Aucune disponibilité enregistrée.</p>
+                                    <p className="p-3 text-[13px] text-slate-500">
+                                        Aucune disponibilité enregistrée.
+                                    </p>
                                 )}
                             </section>
                         </>

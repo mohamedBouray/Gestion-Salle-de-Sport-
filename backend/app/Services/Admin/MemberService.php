@@ -60,18 +60,22 @@ class MemberService
         ]);
     }
 
-    public function create(array $data, User $admin): array
-    {
+    public function create(array $data, User $admin): array{
         $member = DB::transaction(function () use ($data, $admin) {
-            return User::create([
-                'name' => $data['name'],
-                'email' => mb_strtolower(trim($data['email'])),
-                'phone' => $data['phone'] ?? null,
-                'password' => Str::random(64),
-                'role' => User::MEMBER,
-                'status' => 'pending',
-                'created_by_user_id' => $admin->id,
-            ]);
+            $member = new User();
+
+            $member->name = trim($data['name']);
+            $member->email = mb_strtolower(trim($data['email']));
+            $member->phone = $data['phone'] ?? null;
+            $member->password = Str::random(64);
+
+            $member->role = User::MEMBER;
+            $member->status = 'pending';
+            $member->created_by_user_id = $admin->id;
+
+            $member->save();
+
+            return $member;
         });
 
         $sent = $this->invitations->send($member, $admin);

@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
-import { Plus, Search, ChevronLeft, ChevronRight,Users, UserRoundCheck, UserRoundX, Clock3} from "lucide-react";
+import {
+    Plus, Search, ChevronLeft, ChevronRight, Users, UserRoundCheck,
+    UserRoundX, Clock3, FileSpreadsheet, LoaderCircle,
+} from "lucide-react";
 
-// Componemts
+// Components
 import CoachForm from "../../components/admin/coach/CoachForm";
 import CoachesTable from "../../components/admin/coach/CoachesTable";
 import CoachDetails from "../../components/admin/coach/CoachDetails";
 
-// APIS 
+// APIs
 import { adminApi } from "../../services/AdminApi";
 import { apiError } from "../../services/api";
-
 
 const cards = [
     { key: "total", label: "Total coachs", icon: Users },
@@ -17,6 +19,15 @@ const cards = [
     { key: "pending", label: "En attente", icon: Clock3 },
     { key: "inactive", label: "Inactifs", icon: UserRoundX },
 ];
+
+const statusLabels = {
+    active: "Actif",
+    pending: "En attente",
+    inactive: "Bloqué",
+};
+
+const formatDate = (value) =>
+    value ? new Date(value).toLocaleDateString("fr-MA") : "";
 
 export default function CoachesPage() {
     const [search, setSearch] = useState("");
@@ -29,6 +40,7 @@ export default function CoachesPage() {
     const [stats, setStats] = useState({});
     const [pagination, setPagination] = useState({});
     const [loading, setLoading] = useState(true);
+    const [exporting, setExporting] = useState(false);
     const [error, setError] = useState("");
     const [notice, setNotice] = useState("");
 
@@ -71,7 +83,9 @@ export default function CoachesPage() {
     }
 
     async function saveCoach(payload, id) {
-        const result = id ? await adminApi.coaches.update(id, payload): await adminApi.coaches.create(payload);
+        const result = id
+            ? await adminApi.coaches.update(id, payload)
+            : await adminApi.coaches.create(payload);
 
         setFormCoach(undefined);
         refresh(result.message || "Coach enregistré.");
@@ -111,6 +125,7 @@ export default function CoachesPage() {
             "Invitation renvoyée."
         );
     }
+
     function toggleStatus(coach) {
         if (coach.status === "pending") return;
 
@@ -130,49 +145,122 @@ export default function CoachesPage() {
         );
     }
 
-    return (
-        <div className="min-h-full bg-slate-50 px-4 py-6 text-slate-900 sm:px-6">
-            <div className="mx-auto max-w-[1500px] space-y-5">
+    // =====================================
+    // EXPORT EXCEL (tous les coachs, avec les filtres actuels)
+    // =====================================
 
-                <header className="flex flex-wrap items-center justify-between gap-4">
+    async function exportExcel() {
+        if (exporting) return;
+
+        setExporting(true);
+        setError("");
+        setNotice("");
+
+        try {
+            const blob = await adminApi.coaches.exportExcel({search: query, status, });
+            // Create a temporary download link.
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            const day = new Date().toLocaleDateString("en-CA");
+            link.download = `coachs-${day}.xlsx`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+
+            window.setTimeout(() => {
+                window.URL.revokeObjectURL(url);
+            }, 1000);
+
+            setNotice("Téléchargement du fichier Excel lancé.");
+        } catch (err) {
+            let message = "Impossible d'exporter les coachs.";
+            const responseData = err?.response?.data;
+
+            if (responseData instanceof Blob) {
+                try {
+                    const text = await responseData.text();
+                    const json = JSON.parse(text);
+                    message = json.message || message;
+                } catch {
+                }
+            } else {
+                message = apiError(err);
+            }
+
+            setError(message);
+        } finally {
+            setExporting(false);
+        }
+    }
+
+
+    return (
+        <div className="min-h-full bg-slate-50 px-4 py-5 text-slate-900 sm:px-6">
+            <div className="mx-auto max-w-[1400px] space-y-4">
+
+                {/* Header */}
+                <header className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                        <p className="text-xs font-semibold text-blue-600">
-                            ADMINISTRATION / COACHS
-                        </p>
-                        <h1 className="mt-1 text-2xl font-bold">
+                        <h1 className="text-xl font-extrabold tracking-tight text-[#0f1b33] sm:text-2xl">
                             Gestion des coachs
                         </h1>
-                        <p className="mt-1 text-sm text-slate-500">
+                        <p className="mt-1 text-[13px] text-slate-500">
                             Gérez les entraîneurs, leurs profils et leurs accès.
                         </p>
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={() => setFormCoach(null)}
-                        className="flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
-                        <Plus size={17} /> Ajouter un coach
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                        <button
+                            type="button"
+                            onClick={exportExcel}
+                            disabled={exporting || loading}
+                            className=" cursor-pointer inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-3 text-xs font-semibold text-slate-700 transition hover:border-emerald-200 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">
+                            {exporting ? (
+                                <LoaderCircle size={15} className="animate-spin" />
+                            ) : (
+                                <FileSpreadsheet size={15} />
+                            )}
+                            {exporting ? "Export..." : "Exporter Excel"}
+                        </button>
+
+                        <button type="button"
+                            onClick={() => setFormCoach(null)}
+                            className=" cursor-pointer inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-3 text-xs font-bold text-white transition hover:bg-blue-700">
+                            <Plus size={15} />
+                            Ajouter un coach
+                        </button>
+                    </div>
                 </header>
 
+                {/* Stats */}
                 <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                     {cards.map(({ key, label, icon: Icon }) => (
-                        <div key={key} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-                            <div className="flex items-center justify-between gap-2 text-sm text-slate-500">
-                                <span>{label}</span>
-                                <Icon size={19} className="text-blue-600" />
+                        <div key={key}
+                            className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-5">
+                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                                <Icon size={18} />
+                            </span>
+
+                            <div className="min-w-0">
+                                <p className="text-xl font-bold leading-none">
+                                    {stats[key] ?? 0}
+                                </p>
+                                <p className="mt-1 truncate text-xs text-slate-500">
+                                    {label}
+                                </p>
                             </div>
-                            <p className="mt-3 text-3xl font-bold">
-                                {stats[key] ?? 0}
-                            </p>
                         </div>
                     ))}
                 </div>
 
-                <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                    <div className="flex flex-wrap gap-3 border-b border-slate-100 p-4">
-                        <div className="relative min-w-[220px] flex-1">
-                            <Search size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                {/* Table card */}
+                <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                    <div className="flex flex-wrap gap-2 border-b border-slate-200 px-4 py-3">
+                        <div className="relative min-w-[220px] flex-1 sm:max-w-sm">
+                            <Search
+                                size={15}
+                                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                             <input
                                 type="search"
                                 value={search}
@@ -181,8 +269,7 @@ export default function CoachesPage() {
                                     setPage(1);
                                 }}
                                 placeholder="Nom, e-mail ou spécialité..."
-                                className="w-full rounded-lg border border-slate-200 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-blue-500"
-                            />
+                                className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-[13px] outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/10"/>
                         </div>
 
                         <select
@@ -191,23 +278,22 @@ export default function CoachesPage() {
                                 setStatus(e.target.value);
                                 setPage(1);
                             }}
-                            className="rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-blue-500"
-                        >
+                            className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-[13px] outline-none transition focus:border-blue-500 focus:bg-white">
                             <option value="">Tous les statuts</option>
                             <option value="active">Actifs</option>
                             <option value="pending">En attente</option>
-                            <option value="inactive">Inactifs</option>
+                            <option value="inactive">Bloqués</option>
                         </select>
                     </div>
 
                     {error && (
-                        <p role="alert" className="m-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">
+                        <p role="alert" className="mx-4 mt-3 rounded-lg border border-red-100 bg-red-50 px-3 py-2.5 text-[13px] text-red-700">
                             {error}
                         </p>
                     )}
 
                     {notice && (
-                        <p role="status" className="m-4 rounded-lg bg-green-50 p-3 text-sm text-green-700">
+                        <p role="status" className="mx-4 mt-3 rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2.5 text-[13px] text-emerald-700">
                             {notice}
                         </p>
                     )}
@@ -220,31 +306,27 @@ export default function CoachesPage() {
                         onEdit={setFormCoach}
                         onDelete={archiveCoach}
                         onResend={resendInvitation}
-                        onToggleStatus={toggleStatus}
-                    />
+                        onToggleStatus={toggleStatus}/>
 
-                    <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 p-4 text-sm text-slate-500">
+                    <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-slate-50/50 px-4 py-2.5 text-xs text-slate-500">
                         <span>
                             {pagination.total ?? 0} coach(s) · Page {pagination.current_page ?? 1} / {pagination.last_page ?? 1}
                         </span>
 
-                        <div className="flex gap-2">
-                            <button
-                                type="button"
+                        <div className="flex gap-1.5">
+                            <button type="button"
                                 disabled={loading || page <= 1}
                                 onClick={() => setPage((p) => p - 1)}
-                                className="flex items-center gap-1 rounded-lg border px-3 py-2 disabled:opacity-40"
-                            >
-                                <ChevronLeft size={16} /> Précédent
+                                className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40" >
+                                <ChevronLeft size={14} /> Précédent
                             </button>
 
                             <button
                                 type="button"
                                 disabled={loading || page >= (pagination.last_page ?? 1)}
                                 onClick={() => setPage((p) => p + 1)}
-                                className="flex items-center gap-1 rounded-lg border px-3 py-2 disabled:opacity-40"
-                            >
-                                Suivant <ChevronRight size={16} />
+                                className="inline-flex items-center gap-1 rounded-md border border-slate-200 bg-white px-2.5 py-1.5 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-40">
+                                Suivant <ChevronRight size={14} />
                             </button>
                         </div>
                     </footer>
@@ -254,15 +336,13 @@ export default function CoachesPage() {
                     <CoachForm
                         coach={formCoach}
                         onClose={() => setFormCoach(undefined)}
-                        onSave={saveCoach}
-                    />
+                        onSave={saveCoach}/>
                 )}
 
                 {detailsId !== null && (
                     <CoachDetails
                         coachId={detailsId}
-                        onClose={() => setDetailsId(null)}
-                    />
+                        onClose={() => setDetailsId(null)} />
                 )}
             </div>
         </div>

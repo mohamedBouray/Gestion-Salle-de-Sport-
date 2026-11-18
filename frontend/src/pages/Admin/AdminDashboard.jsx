@@ -1,8 +1,2 @@
-export default function AdminDashboard(){
-
-	return (
-		<>
-		<h1>ADMIIIIIIIIN </h1>
-		</>
-	)
-}
+import OverviewPage from "../Shared/OverviewPage";
+export default function Dashboard() { return <OverviewPage role="admin"/>; }

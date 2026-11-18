@@ -12,7 +12,6 @@ export function AuthProvider({ children }) {
     // INITIAL AUTH CHECK
     useEffect(() => {
         let active = true;
-
         const initialize = async () => {
             try {
                 const setup = await checkSetup();
@@ -52,15 +51,8 @@ export function AuthProvider({ children }) {
     }, []);
 
     useEffect(() => {
-        const handleUnauthorized = () => {
-            setUser(null);
-        };
-
-        window.addEventListener(
-            "auth:unauthorized",
-            handleUnauthorized
-        );
-
+        const handleUnauthorized = () => { setUser(null); };
+        window.addEventListener("auth:unauthorized", handleUnauthorized);
         return () => {
             window.removeEventListener(
                 "auth:unauthorized",
@@ -87,13 +79,12 @@ export function AuthProvider({ children }) {
     };
 
     // LOGOUT
+
     const logout = async () => {
-        try {
-            await logoutUser();
-        } finally {
-            setUser(null);
-        }
+        await logoutUser();
+        setUser(null);
     };
+
 
     // REFRESH AUTHENTICATED USER
     const refreshUser = async () => {

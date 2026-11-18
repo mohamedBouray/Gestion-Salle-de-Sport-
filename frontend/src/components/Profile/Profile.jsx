@@ -121,16 +121,16 @@ export default function Profile() {
         `/${user?.role || "member"}/dashboard`;
 
     const inputClass =
-        "w-full rounded-lg border border-zinc-700 " +
-        "bg-zinc-800/50 px-4 py-3 text-sm text-white " +
+        "w-full rounded-lg border border-slate-200 " +
+        "bg-white px-4 py-3 text-sm text-white " +
         "placeholder-zinc-500 focus:border-blue-500 " +
         "focus:outline-none focus:ring-1 focus:ring-blue-500";
 
     const labelClass =
-        "mb-2 block text-sm font-medium text-zinc-300";
+        "mb-2 block text-sm font-medium text-slate-700";
 
     return (
-        <div className="min-h-screen bg-zinc-950 px-4 py-10 text-white">
+        <div className="min-h-full bg-[#f6f8fc] px-4 py-8 text-slate-900">
 
             <div className="mx-auto max-w-3xl">
 
@@ -138,7 +138,7 @@ export default function Profile() {
                 <div className="mb-8">
                     <Link
                         to={dashboard}
-                        className="text-sm text-blue-400 hover:text-blue-300"
+                        className="text-sm text-blue-600 hover:text-blue-700"
                     >
                         ← Back to Dashboard
                     </Link>
@@ -147,14 +147,14 @@ export default function Profile() {
                         My Profile
                     </h1>
 
-                    <p className="mt-2 text-zinc-400">
+                    <p className="mt-2 text-slate-500">
                         Manage your personal information
                         and account security.
                     </p>
                 </div>
 
                 {/* ACCOUNT INFORMATION */}
-                <div className="mb-6 rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+                <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6">
 
                     <div className="mb-6 flex items-center gap-4">
                         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-xl font-bold">
@@ -166,7 +166,7 @@ export default function Profile() {
                                 {user?.name}
                             </h2>
 
-                            <p className="text-sm capitalize text-zinc-400">
+                            <p className="text-sm capitalize text-slate-500">
                                 {user?.role}
                             </p>
                         </div>
@@ -174,7 +174,7 @@ export default function Profile() {
 
                     <div className="grid gap-4 sm:grid-cols-2">
                         <div>
-                            <p className="text-xs text-zinc-500">
+                            <p className="text-xs text-slate-400">
                                 Email Address
                             </p>
                             <p className="mt-1 break-all text-sm">
@@ -183,7 +183,7 @@ export default function Profile() {
                         </div>
 
                         <div>
-                            <p className="text-xs text-zinc-500">
+                            <p className="text-xs text-slate-400">
                                 Account Status
                             </p>
                             <p className="mt-1 text-sm capitalize text-green-400">
@@ -194,13 +194,13 @@ export default function Profile() {
                 </div>
 
                 {/* EDIT PROFILE */}
-                <div className="mb-6 rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+                <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-6">
 
                     <h2 className="mb-1 text-xl font-semibold">
                         Personal Information
                     </h2>
 
-                    <p className="mb-6 text-sm text-zinc-400">
+                    <p className="mb-6 text-sm text-slate-500">
                         Update your name and phone number.
                     </p>
 
@@ -266,13 +266,13 @@ export default function Profile() {
                 </div>
 
                 {/* CHANGE PASSWORD */}
-                <div className="rounded-2xl border border-zinc-800 bg-zinc-900 p-6">
+                <div className="rounded-2xl border border-slate-200 bg-white p-6">
 
                     <h2 className="mb-1 text-xl font-semibold">
                         Change Password
                     </h2>
 
-                    <p className="mb-6 text-sm text-zinc-400">
+                    <p className="mb-6 text-sm text-slate-500">
                         Keep your account secure
                         with a strong password.
                     </p>
@@ -333,7 +333,7 @@ export default function Profile() {
                                 required
                             />
 
-                            <p className="mt-2 text-xs text-zinc-500">
+                            <p className="mt-2 text-xs text-slate-400">
                                 At least 8 characters,
                                 uppercase, lowercase and a number.
                             </p>

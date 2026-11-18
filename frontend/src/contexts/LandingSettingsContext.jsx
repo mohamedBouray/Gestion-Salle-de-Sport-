@@ -9,14 +9,12 @@ export function LandingSettingsProvider({ children }) {
 
     useEffect(() => {
         let active = true;
-        publicApi.siteSettings()
-            .then((res) => {
-                if (active) setSettings({ ...landingDefaults, ...res.settings });
-            })
-            .catch((err) => console.error("Landing settings:", err));
+        publicApi.siteSettings().then((res) => {
+                if (active)
+                    setSettings({ ...landingDefaults, ...res.settings });
+            }).catch((err) => console.error("Landing settings:", err));
         return () => { active = false; };
     }, []);
-
     return <Context.Provider value={settings}>{children}</Context.Provider>;
 }
 

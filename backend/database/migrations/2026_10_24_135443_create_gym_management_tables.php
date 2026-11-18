@@ -228,12 +228,13 @@ return new class extends Migration {
             $table->string('phone', 32)->nullable();
             $table->string('subject', 190);
             $table->text('message');
-            $table->string('status', 20)->default('new'); // new, read, replied
+            $table->string('status', 20)->default('new'); 
             $table->timestamp('read_at')->nullable();
             $table->timestamp('replied_at')->nullable();
             $table->timestamps();
             $table->index(['status', 'created_at']);
         });
+
 
         // 11. Paramètres et textes de la Landing Page (clé => valeur).
         Schema::create('site_settings', function (Blueprint $table) {

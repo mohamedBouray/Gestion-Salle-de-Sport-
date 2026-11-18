@@ -3,45 +3,55 @@ import api, { getCsrfCookie } from "./api";
 const data = (res) => res.data;
 const csrf = () => getCsrfCookie();
 
-// Members
-const members = {
-    list: (params = {}) =>
-        api.get("/api/admin/members", { params }).then(data),
+// =============================
+// Landing Page Settings
+// ============================
+const siteSettings = {
+    get: () => api.get("/api/admin/site-settings").then(data),
 
-    show: (id) =>
-        api.get(`/api/admin/members/${id}`).then(data),
-
-    async create(payload) {
-        await csrf();
-        return api.post("/api/admin/members", payload).then(data);
+    async update(settings) {await csrf();
+        return api.put("/api/admin/site-settings", {
+            settings,
+        }).then(data);
     },
 
-    async update(id, payload) {
+    async uploadImage(key, image) {
         await csrf();
-        return api.put(`/api/admin/members/${id}`, payload).then(data);
-    },
+        const form = new FormData();
+        form.append("key", key);
+        form.append("image", image);
 
-    async changeStatus(id, status) {
-        if (!["active", "inactive"].includes(status)) {
-            throw new Error("Statut invalide.");
-        }
-
-        await csrf();
-        return api.put(`/api/admin/members/${id}`, { status }).then(data);
-    },
-
-    async remove(id) {
-        await csrf();
-        return api.delete(`/api/admin/members/${id}`).then(data);
-    },
-
-    async resendInvitation(id) {
-        await csrf();
-        return api.post(`/api/admin/members/${id}/resend-invitation`).then(data);
+        return api.post(
+            "/api/admin/site-settings/image",
+            form
+        ).then(data);
     },
 };
 
-// Coaches
+
+// ========================================
+// CONTACT MESSAGES - ADMIN
+// ========================================
+const messages = {
+
+    list: (params = {}) => api.get("/api/admin/messages", { params }).then(data),
+    async markRead(id) {  await csrf();
+        return api.patch( `/api/admin/messages/${id}`, { status: "read" }).then(data);
+    },
+    async reply(id, reply) {
+        await csrf();
+
+        return api.post(
+            `/api/admin/messages/${id}/reply`,
+            { reply }
+        ).then(data);
+    },
+};
+
+
+// =================================
+// Gestion Coaches API 
+// =================================
 const coaches = {
     list: (params = {}) =>
         api.get("/api/admin/coaches", { params }).then(data),
@@ -51,13 +61,14 @@ const coaches = {
 
     async create(payload) {
         await csrf();
-
-        const config = payload instanceof FormData
-            ? { headers: { "Content-Type": undefined } }
-            : {};
-
-        return api.post("/api/admin/coaches", payload, config).then(data);
+        return api.post("/api/admin/coaches", payload).then(data);
     },
+
+    exportExcel: (params = {}) =>
+        api.get("/api/admin/coaches/export", {
+            params,
+            responseType: "blob",
+        }).then(data),
 
     async update(id, payload) {
         await csrf();
@@ -100,44 +111,78 @@ const coaches = {
 };
 
 
+// =================================
+// Gestion Members API 
+// =================================
+const members = {
+    list: (params = {}) =>
+        api.get("/api/admin/members", { params }).then(data),
+
+    show: (id) =>
+        api.get(`/api/admin/members/${id}`).then(data),
+
+    async create(payload) {
+        await csrf();
+        return api.post("/api/admin/members", payload).then(data);
+    },
+
+    async update(id, payload) {
+        await csrf();
+        return api.put(`/api/admin/members/${id}`, payload).then(data);
+    },
+
+    async changeStatus(id, status) {
+        if (!["active", "inactive"].includes(status)) {
+            throw new Error("Statut invalide.");
+        }
+
+        await csrf();
+        return api.put(`/api/admin/members/${id}`, { status }).then(data);
+    },
+
+    async remove(id) {
+        await csrf();
+        return api.delete(`/api/admin/members/${id}`).then(data);
+    },
+
+    async resendInvitation(id) {
+        await csrf();
+        return api.post(`/api/admin/members/${id}/resend-invitation`).then(data);
+    },
+        // EXPORT EXCEL - BACKEND LARAVEL
+    exportExcel: (params = {}) =>
+        api.get("/api/admin/members/export", {
+            params,
+            responseType: "blob",
+        }).then(data),
+
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // Dashboard
 const dashboard = {
     get: () => api.get("/api/admin/dashboard").then(data),
 };
 
-
-
- // Landing Page Settings
-const siteSettings = {
-    get: () =>
-        api.get("/api/admin/site-settings").then(data),
-
-    async update(settings) {
-        await csrf();
-
-        return api.put("/api/admin/site-settings", {
-            settings,
-        }).then(data);
-    },
-
-    async uploadImage(key, image) {
-        await csrf();
-
-        const form = new FormData();
-        form.append("key", key);
-        form.append("image", image);
-
-        return api.post(
-            "/api/admin/site-settings/image",
-            form
-        ).then(data);
-    },
-};
-
-
-
-export const adminApi = { dashboard, members, coaches ,siteSettings};
+export const adminApi = { dashboard, members, coaches ,siteSettings , messages};
 
 export { apiError } from "./api";
 export default adminApi;

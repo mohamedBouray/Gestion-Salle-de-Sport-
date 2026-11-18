@@ -20,7 +20,6 @@ class CoachResource extends JsonResource
             'role' => $this->role,
             'status' => $this->status,
             'created_at' => $this->created_at,
-
             'profile' => [
                 'specialty' => $profile?->specialty,
                 'bio' => $profile?->bio,
@@ -30,6 +29,20 @@ class CoachResource extends JsonResource
                     ? url(Storage::disk('public')->url($profile->photo))
                     : null,
             ],
+            'coached_courses_count' => $this->whenCounted('coachedCourses'),
+            'coached_sessions_count' => $this->whenCounted('coachedSessions'),
+            'received_requests_count' => $this->when(
+                isset($this->received_personal_training_requests_count),
+                fn () => (int) $this->received_personal_training_requests_count
+            ),
+            'coach_availabilities' => $this->whenLoaded('coachAvailabilities', fn () =>
+                $this->coachAvailabilities->map(fn ($slot) => [
+                    'id' => $slot->id,
+                    'day_of_week' => $slot->day_of_week,
+                    'start_time' => $slot->start_time,
+                    'end_time' => $slot->end_time,
+                ])->values()
+            ),
         ];
     }
 }

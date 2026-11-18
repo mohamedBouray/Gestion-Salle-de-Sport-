@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
 
 class ProfileController extends Controller
@@ -62,7 +64,11 @@ class ProfileController extends Controller
             $validated['password']
         );
 
+        $user->setRememberToken(Str::random(60));
         $user->save();
+        DB::table('sessions')->where('user_id', $user->id)
+            ->where('id', '!=', $request->session()->getId())->delete();
+        $request->session()->regenerate();
 
         return response()->json([
             'message' => 'Password changed successfully.',

@@ -13,11 +13,11 @@ export default function Hero() {
         : <Link to={action} className={ctaClass}>{s.hero_button} <ArrowRight size={18} /></Link>;
 
     return (
-        <section id="home" className="relative isolate mx-1.5 min-h-[550px] overflow-hidden bg-[#080e13] sm:min-h-[600px] lg:min-h-[650px]">
+        <section id="home" className="relative isolate min-h-[100svh] overflow-hidden bg-[#080e13]">
             <img src={s.hero_image || "/gym_background.png"} alt="" aria-hidden="true" fetchPriority="high" className="absolute inset-0 h-full w-full object-cover object-center" />
             <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/55 to-black/20" />
-            <div className="relative z-10 flex min-h-[550px] items-center px-5 py-16 sm:min-h-[600px] sm:px-12 lg:min-h-[650px] lg:px-16">
-                <div className="max-w-[580px]">
+            <div className="relative z-10 flex min-h-[100svh] items-center px-5 pb-10 pt-24 sm:px-12 lg:px-16">
+                <div className="max-w-[650px]">
                     <AnimatedContent direction="vertical" distance={35} duration={0.9} initialOpacity={0} threshold={0.1} once>
                         <h1 className="whitespace-pre-line text-[clamp(1.7rem,7.8vw,3rem)] font-extrabold uppercase leading-[1.12] tracking-tight text-blue-600 sm:text-5xl lg:text-[56px]">
                             {s.hero_title}

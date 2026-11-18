@@ -1,6 +1,21 @@
+
 import api, { getCsrfCookie } from "./api";
 
+// ========================================
+// HELPERS
+// ========================================
+
 const data = (response) => response.data;
+
+const post = async (url, payload = {}) => {
+    await getCsrfCookie();
+    return api.post(url, payload).then(data);
+};
+
+const put = async (url, payload = {}) => {
+    await getCsrfCookie();
+    return api.put(url, payload).then(data);
+};
 
 // ========================================
 // SETUP & AUTHENTICATION
@@ -12,53 +27,32 @@ export const checkSetup = () =>
 export const getMe = () =>
     api.get("/api/me").then(data);
 
-export async function registerUser(payload) {
-    await getCsrfCookie();
+export const registerUser = (payload) =>
+    post("/api/register", payload);
 
-    return api.post("/api/register", payload).then(data);
-}
+export const loginUser = (payload) =>
+    post("/api/login", payload);
 
-export async function loginUser(payload) {
-    await getCsrfCookie();
-
-    return api.post("/api/login", payload).then(data);
-}
-
-export async function logoutUser() {
-    await getCsrfCookie();
-
-    return api.post("/api/logout").then(data);
-}
+export const logoutUser = () =>
+    post("/api/logout");
 
 // ========================================
-// PASSWORD
+// PASSWORD RECOVERY
 // ========================================
 
-export async function forgotPassword(email) {
-    await getCsrfCookie();
+export const forgotPassword = (email) =>
+    post("/api/forgot-password", { email });
 
-    return api.post("/api/forgot-password", {
-        email,
-    }).then(data);
-}
-
-export async function resetPassword(payload) {
-    await getCsrfCookie();
-
-    return api.post("/api/reset-password", payload).then(data);
-}
+export const resetPassword = (payload) =>
+    post("/api/reset-password", payload);
 
 // ========================================
 // INVITATIONS
 // ========================================
 
-export async function acceptInvitation(payload) {
-    await getCsrfCookie();
+export const acceptInvitation = (payload) =>
+    post("/api/accept-invitation", payload);
 
-    return api.post("/api/accept-invitation", payload).then(data);
-}
-
-// Compatibility with existing ActivateAccount
 export const invitationApi = {
     accept: acceptInvitation,
 };
@@ -67,16 +61,14 @@ export const invitationApi = {
 // PROFILE
 // ========================================
 
-export async function updateProfile(payload) {
-    await getCsrfCookie();
+export const updateProfile = (payload) =>
+    put("/api/profile", payload);
 
-    return api.put("/api/profile", payload).then(data);
-}
+export const changePassword = (payload) =>
+    put("/api/change-password", payload);
 
-export async function changePassword(payload) {
-    await getCsrfCookie();
-
-    return api.put("/api/change-password", payload).then(data);
-}
+// ========================================
+// ERROR HANDLING
+// ========================================
 
 export { apiError } from "./api";
