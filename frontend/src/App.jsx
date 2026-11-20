@@ -22,7 +22,14 @@ import AdminSchedulePage from "./pages/Admin/SchedulePage";
 import AdminReservation from "./pages/Admin/ReservationsPage";
 import AdminPresences from "./pages/Admin/AttendancePage";
 import LandingPageSettings from "./pages/Admin/SiteSettingsPage"
+import AdminCourseProposalsPage from "./pages/Admin/CourseProposalsPage";
+
 // coaches 
+import CoachCourses from './pages/Coaches/CoursesPage';
+import CoachSchedule from "./pages/Coaches/SchedulePage";
+import CoachMembers from "./pages/Coaches/MembersPage";
+import CoachAttendance from "./pages/Coaches/AttendancePage";
+
 
 // members 
 import MemberReservation from './pages/Members/ReservationsPage';
@@ -128,6 +135,7 @@ function AppRoutes() {
                         <Route path="schedule" element={<AdminSchedulePage />} />
                         <Route path="reservations" element={<AdminReservation />} />
                         <Route path="attendance" element={<AdminPresences/>}/>
+                        <Route path="course-proposals" element={<AdminCourseProposalsPage />}/>
 
 
                         <Route path="landing-page" element={<LandingPageSettings/>}/>
@@ -141,6 +149,10 @@ function AppRoutes() {
                 <Route element={ <PrivateRoute requiredRole="coach" />}>
                     <Route path="/coach"element={<RoleLayout />}>
                         <Route index element={ <Navigate to="dashboard" replace /> }/>
+                        <Route path="classes" element={<CoachCourses />} />
+                        <Route path="schedule" element={<CoachSchedule />} />
+                         <Route path="members" element={<CoachMembers />} />
+                         <Route path="attendance" element={<CoachAttendance />} />
 
                         <Route path="profile" element={<Profile />} />
                         <Route path=":section" element={<SectionPlaceholder />}/>

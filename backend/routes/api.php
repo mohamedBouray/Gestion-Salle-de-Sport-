@@ -98,7 +98,9 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::put('/admin/site-settings', [SiteSettingController::class, 'update']);
         Route::post('/admin/site-settings/image', [SiteSettingController::class, 'uploadImage'])->middleware('throttle:10,1');
 
-
+        Route::get('/admin/course-proposals', [\App\Http\Controllers\Api\Admin\CourseProposalReviewController::class, 'index']);
+        Route::post('/admin/course-proposals/{proposal}/approve', [\App\Http\Controllers\Api\Admin\CourseProposalReviewController::class, 'approve'])->middleware('throttle:20,1');
+        Route::post('/admin/course-proposals/{proposal}/reject', [\App\Http\Controllers\Api\Admin\CourseProposalReviewController::class, 'reject'])->middleware('throttle:20,1');
         
 
     });
@@ -106,6 +108,70 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
 
 
     Route::middleware('role:coach')->group(function () {
+
+        // ==========================================
+        // COACH - MES COURS
+        // ==========================================
+
+        Route::get('/coach/workspace/courses',
+            [\App\Http\Controllers\Api\Coach\CoachCoursePlanningController::class, 'courses']);
+
+
+        // ==========================================
+        // COACH - MON PLANNING
+        // ==========================================
+
+        Route::get('/coach/workspace/sessions',
+            [\App\Http\Controllers\Api\Coach\CoachCoursePlanningController::class, 'sessions']);
+
+
+        // ==========================================
+        // COACH - MES DISPONIBILITES
+        // ==========================================
+
+        Route::get('/coach/workspace/availabilities',
+            [\App\Http\Controllers\Api\Coach\CoachCoursePlanningController::class, 'availabilities']);
+
+
+            Route::get('/coach/course-proposals', [\App\Http\Controllers\Api\Coach\CourseProposalController::class, 'index']);
+            Route::post('/coach/course-proposals', [\App\Http\Controllers\Api\Coach\CourseProposalController::class, 'store'])->middleware('throttle:10,1');
+            Route::put('/coach/workspace/availabilities', [\App\Http\Controllers\Api\Coach\AvailabilityManagementController::class, 'update'])->middleware('throttle:15,1');
+
+
+
+            Route::get(
+                '/coach/members',
+                [\App\Http\Controllers\Api\Coach\CoachMemberController::class, 'index']
+            );
+
+            Route::get(
+                '/coach/members/{member}',
+                [\App\Http\Controllers\Api\Coach\CoachMemberController::class, 'show']
+            );
+
+
+        // ==========================================
+        // COACH - PRESENCES DES SEANCES
+        // ==========================================
+
+        Route::get(
+            '/coach/attendance/sessions/{session}/participants',
+            [
+                \App\Http\Controllers\Api\Coach\CoachAttendanceController::class,
+                'participants'
+            ]
+        );
+
+        Route::patch(
+            '/coach/attendance/sessions/{session}/enrollments/{enrollment}',
+            [
+                \App\Http\Controllers\Api\Coach\CoachAttendanceController::class,
+                'mark'
+            ]
+        )->middleware('throttle:30,1');
+
+
+
     });
 
     Route::middleware('role:member')->group(function () {

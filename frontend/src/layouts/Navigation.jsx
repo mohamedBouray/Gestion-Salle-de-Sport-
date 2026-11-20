@@ -1,26 +1,7 @@
 
-import {
-     LayoutDashboard,
-    UsersRound,
-    UserRoundCheck,
-    Dumbbell,
-    CalendarDays,
-    CalendarCheck2,
-    ClipboardCheck,
-    ListTodo,
-    CreditCard,
-    WalletCards,
-    BadgeDollarSign,
-    BarChart3,
-    MessageSquare,
-    PanelsTopLeft,
-    Settings2,
-    CircleUserRound,
-    BookOpenCheck,
-    TicketCheck,
-    ShieldCheck,
-    Clock3,
-} from "lucide-react";
+import { LayoutDashboard,UsersRound, UserRoundCheck, Dumbbell, CalendarDays, CalendarCheck2, ClipboardCheck, ListTodo, CreditCard,
+    WalletCards, BadgeDollarSign, BarChart3, MessageSquare, PanelsTopLeft, Settings2, CircleUserRound, BookOpenCheck, TicketCheck, ShieldCheck,
+    Clock3, ClipboardList } from "lucide-react";
 
 export const ROLE_CONFIG = {
     admin: {
@@ -43,17 +24,18 @@ export const ROLE_CONFIG = {
                 title: "COURS COLLECTIFS",
                 items: [
                     { label: "Cours sportifs", path: "/admin/classes", icon: Dumbbell,},
+                    { label: "Propositions de cours", path: "/admin/course-proposals", icon: ClipboardList,},
                     {label: "Planning", path: "/admin/schedule", icon: CalendarDays,},
                     { label: "Réservations", path: "/admin/reservations",icon: CalendarCheck2,},
                     { label: "Présences", path: "/admin/attendance", icon: ClipboardCheck,},
                 ],
             },
-            {
-                title: "COACHING PERSONNEL",
-                items: [{ label: "Demandes privées",path: "/admin/personal-requests", icon: ListTodo,},
-                    {label: "Séances privées",path: "/admin/private-sessions", icon: CalendarDays,},
-                ],
-            },
+            // {
+            //     title: "COACHING PERSONNEL",
+            //     items: [{ label: "Demandes privées",path: "/admin/personal-requests", icon: ListTodo,},
+            //         {label: "Séances privées",path: "/admin/private-sessions", icon: CalendarDays,},
+            //     ],
+            // },
             {
                 title: "FINANCES",
                 items: [
@@ -62,16 +44,12 @@ export const ROLE_CONFIG = {
                     { label: "Paiements",path: "/admin/payments", icon: WalletCards,},
                 ],
             },
-            {
-                title: "ANALYSE",
-                items: [
-                    {
-                        label: "Statistiques",
-                        path: "/admin/analytics",
-                        icon: BarChart3,
-                    },
-                ],
-            },
+            // {
+            //     title: "ANALYSE",
+            //     items: [
+            //         { label: "Statistiques", path: "/admin/analytics", icon: BarChart3, },
+            //     ],
+            // },
             {
                 title: "SITE WEB",
                 items: [
@@ -105,13 +83,7 @@ export const ROLE_CONFIG = {
         sections: [
             {
                 title: "PRINCIPAL",
-                items: [
-                    {
-                        label: "Tableau de bord",
-                        path: "/coach/dashboard",
-                        icon: LayoutDashboard,
-                    },
-                ],
+                items: [{ label: "Tableau de bord", path: "/coach/dashboard", icon: LayoutDashboard, },],
             },
             {
                 title: "MON ACTIVITÉ",
@@ -136,11 +108,11 @@ export const ROLE_CONFIG = {
                         path: "/coach/attendance",
                         icon: ClipboardCheck,
                     },
-                    {
-                        label: "Demandes",
-                        path: "/coach/tasks",
-                        icon: ListTodo,
-                    },
+                    // {
+                    //     label: "Demandes",
+                    //     path: "/coach/tasks",
+                    //     icon: ListTodo,
+                    // },
                 ],
             },
             {
@@ -200,11 +172,11 @@ export const ROLE_CONFIG = {
                         path: "/member/attendance",
                         icon: Clock3,
                     },
-                    {
-                        label: "Demandes privées",
-                        path: "/member/requests",
-                        icon: ListTodo,
-                    },
+                    // {
+                    //     label: "Demandes privées",
+                    //     path: "/member/requests",
+                    //     icon: ListTodo,
+                    // },
                 ],
             },
             {
