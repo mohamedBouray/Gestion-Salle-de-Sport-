@@ -48,7 +48,7 @@ export default function Sidebar({
                         title={collapsed ? "Agrandir le menu" : "Réduire le menu"}
                         aria-label={collapsed ? "Agrandir le menu" : "Réduire le menu"}
                         aria-expanded={!collapsed}
-                        className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-blue-50 hover:text-blue-600 lg:flex">
+                        className=" cursor-pointer hidden h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-blue-50 hover:text-blue-600 lg:flex">
                         {collapsed ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
                     </button>
                 )}

@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
@@ -42,9 +41,7 @@ export default function DashboardLayout({ role = "member", user, onLogout }) {
     }, [mobileOpen]);
 
     // Toggle desktop Sidebar
-    const toggleSidebar = () => {
-        setSidebarCollapsed((prev) => !prev);
-    };
+    const toggleSidebar = () => { setSidebarCollapsed((prev) => !prev);};
 
     // Logout
     async function handleLogout() {
@@ -64,75 +61,31 @@ export default function DashboardLayout({ role = "member", user, onLogout }) {
 
     return (
         <div className="min-h-dvh bg-[#F8FAFC] text-slate-900 antialiased">
-
             {/* Mobile Overlay */}
             {mobileOpen && (
-                <button
-                    type="button"
-                    aria-label="Fermer le menu"
-                    onClick={() => setMobileOpen(false)}
-                    className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-[2px] lg:hidden"
-                />
+                <button type="button" aria-label="Fermer le menu" onClick={() => setMobileOpen(false)}
+                    className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-[2px] lg:hidden"/>
             )}
 
             {/* Fixed Sidebar */}
-            <aside
-                id="dashboard-sidebar"
-                className={[
-                    "fixed inset-y-0 left-0 z-50 h-dvh",
-                    "overflow-hidden border-r border-slate-200 bg-white",
-                    "transition-[width,transform] duration-300 ease-in-out",
-                    "motion-reduce:transition-none lg:translate-x-0",
-                    "w-[252px]",
-                    sidebarCollapsed ? "lg:w-[72px]" : "lg:w-[252px]",
-                    mobileOpen
-                        ? "translate-x-0 shadow-2xl"
-                        : "-translate-x-full",
-                ].join(" ")}
-            >
-                <Sidebar
-                    role={safeRole}
-                    user={user}
-                    onClose={() => setMobileOpen(false)}
-                    onLogout={handleLogout}
-                    loggingOut={loggingOut}
-                    collapsed={sidebarCollapsed}
-                    onToggleCollapse={toggleSidebar}
-                />
+            <aside id="dashboard-sidebar" className={["fixed inset-y-0 left-0 z-50 h-dvh","overflow-hidden border-r border-slate-200 bg-white","transition-[width,transform] duration-300 ease-in-out",
+                    "motion-reduce:transition-none lg:translate-x-0","w-[252px]", sidebarCollapsed ? "lg:w-[72px]" : "lg:w-[252px]",
+                    mobileOpen ? "translate-x-0 shadow-2xl": "-translate-x-full",].join(" ")}>
+                <Sidebar role={safeRole} user={user} onClose={() => setMobileOpen(false)} onLogout={handleLogout} loggingOut={loggingOut} collapsed={sidebarCollapsed} onToggleCollapse={toggleSidebar}/>
             </aside>
 
             {/* Main Workspace */}
-            <div
-                className={[
-                    "min-h-dvh min-w-0",
-                    "transition-[margin-left] duration-300 ease-in-out",
-                    "motion-reduce:transition-none",
-                    sidebarCollapsed
-                        ? "lg:ml-[72px]"
-                        : "lg:ml-[252px]",
-                ].join(" ")}
-            >
+            <div className={[ "min-h-dvh min-w-0", "transition-[margin-left] duration-300 ease-in-out", "motion-reduce:transition-none",
+                    sidebarCollapsed ? "lg:ml-[72px]" : "lg:ml-[252px]",].join(" ")}>
 
                 {/* Header */}
                 <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur-xl">
-                    <Header
-                        role={safeRole}
-                        user={user}
-                        onMenuOpen={() => setMobileOpen(true)}
-                        onLogout={handleLogout}
-                        loggingOut={loggingOut}
-                    />
+                    <Header role={safeRole} user={user} onMenuOpen={() => setMobileOpen(true)} onLogout={handleLogout} loggingOut={loggingOut} />
                 </header>
 
                 {/* Page Content */}
                 <main className="min-h-[calc(100dvh-68px)] min-w-0 bg-[#F8FAFC]">
-                    <Outlet
-                        context={{
-                            role: safeRole,
-                            user,
-                            onLogout: handleLogout,
-                        }}
-                    />
+                    <Outlet context={{ role: safeRole, user, onLogout: handleLogout,}}/>
                 </main>
             </div>
         </div>
