@@ -16,6 +16,13 @@ class CoachWorkspaceService
     public function propose(User $coach, array $data): CourseProposal
     {
         return DB::transaction(function () use ($coach, $data) {
+            // Sérialiser les propositions du même coach : évite deux doublons simultanés.
+            $activeCoach = User::query()->whereKey($coach->id)
+                ->where('role', 'coach')->where('status', 'active')
+                ->lockForUpdate()->first();
+            if (!$activeCoach) {
+                throw ValidationException::withMessages(['coach' => 'Compte coach inactif ou introuvable.']);
+            }
             $name = trim($data['name']);
             $exists = CourseProposal::query()
                 ->where('coach_id', $coach->id)

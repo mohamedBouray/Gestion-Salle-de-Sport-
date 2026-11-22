@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 
 import {
@@ -122,7 +121,7 @@ export default function CoursesPage() {
               {loading ? "—" : pagination.total}
             </p>
             <p className="text-[11px] text-slate-500">
-              Cours disponibles
+              Cours actifs
             </p>
           </div>
         </div>

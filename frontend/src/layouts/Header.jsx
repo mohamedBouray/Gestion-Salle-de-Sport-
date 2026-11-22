@@ -82,7 +82,7 @@ function SearchBox({ role, pages }) {
     return (
         <div ref={rootRef} className="flex items-center">
             {/* Mobile trigger */}
-            <button type="button" aria-label="Ouvrir la recherche" onClick={() => { setMobile((v) => !v); setOpen(true); }} className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 sm:hidden">
+            <button type="button" aria-label="Ouvrir la recherche" onClick={() => { setMobile((v) => !v); setOpen(true); }} className=" cursor-pointer rounded-lg p-2 text-slate-600 hover:bg-slate-100 sm:hidden">
                 <Search size={19} />
             </button>
 
@@ -92,7 +92,7 @@ function SearchBox({ role, pages }) {
                     {busy ? <Loader2 size={16} className="shrink-0 animate-spin text-blue-500" /> : <Search size={16} className="shrink-0 text-slate-400" />}
                     <input ref={inputRef} value={query} onChange={(e) => { setQuery(e.target.value); setActive(0); setOpen(true); }} onFocus={() => setOpen(true)} onKeyDown={onKeyDown} placeholder="Rechercher dans le contenu..." aria-label="Recherche globale" aria-controls="global-search-results" aria-expanded={open && hasQuery} className="w-full min-w-0 bg-transparent text-[13px] text-slate-800 outline-none placeholder:text-slate-400" />
                     {query
-                        ? <button type="button" onClick={() => { setQuery(""); inputRef.current?.focus(); }} aria-label="Effacer" className="text-slate-400 hover:text-slate-700"><X size={15} /></button>
+                        ? <button type="button" onClick={() => { setQuery(""); inputRef.current?.focus(); }} aria-label="Effacer" className="cursor-pointer text-slate-400 hover:text-slate-700"><X size={15} /></button>
                         : <kbd className="hidden shrink-0 rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-medium text-slate-400 lg:block">Ctrl K</kbd>}
                 </div>
 
@@ -104,7 +104,7 @@ function SearchBox({ role, pages }) {
                             return (
                                 <li key={r.id} role="presentation">
                                     {r.type !== results[i - 1]?.type && <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">{r.type}</p>}
-                                    <button type="button" role="option" aria-selected={i === active} onMouseEnter={() => setActive(i)} onClick={() => go(r.path)} className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left ${i === active ? "bg-blue-50 text-blue-700" : "text-slate-700"}`}>
+                                    <button type="button" role="option" aria-selected={i === active} onMouseEnter={() => setActive(i)} onClick={() => go(r.path)} className={`cursor-pointer flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left ${i === active ? "bg-blue-50 text-blue-700" : "text-slate-700"}`}>
                                         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-blue-600 ring-1 ring-inset ring-slate-200"><Icon size={15} /></span>
                                         <span className="min-w-0 flex-1">
                                             <span className="block truncate text-[13px] font-semibold">{r.title}</span>
@@ -143,7 +143,7 @@ function AccountMenu({ role, user, config, onLogout, loggingOut }) {
 
     return (
         <div ref={ref} className="relative">
-            <button type="button" onClick={() => setOpen((v) => !v)} aria-label="Menu du compte" aria-expanded={open} className="flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-slate-50">
+            <button type="button" onClick={() => setOpen((v) => !v)} aria-label="Menu du compte" aria-expanded={open} className="cursor-pointer flex items-center gap-2 rounded-lg p-1.5 transition-colors hover:bg-slate-50">
                 <span className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-50 text-[11px] font-bold text-blue-700">{initials(user?.name)}</span>
                 <span className="hidden max-w-32 text-left md:block">
                     <span className="block truncate text-xs font-semibold text-slate-800">{name}</span>
@@ -157,10 +157,10 @@ function AccountMenu({ role, user, config, onLogout, loggingOut }) {
                         <p className="truncate text-xs font-semibold text-slate-800">{name}</p>
                         <p className="truncate text-[11px] text-slate-500">{user?.email}</p>
                     </div>
-                    <button type="button" onClick={() => navigate(`/${role}/profile`)} className={`${menuItem} text-slate-700 hover:bg-slate-50`}>
+                    <button type="button" onClick={() => navigate(`/${role}/profile`)} className={`${menuItem} text-slate-700 hover:bg-slate-50 cursor-pointer`}>
                         <CircleUserRound size={16} />Mon profil
                     </button>
-                    <button type="button" disabled={loggingOut} onClick={() => { setOpen(false); onLogout?.(); }} className={`${menuItem} text-red-600 hover:bg-red-50 disabled:opacity-50`}>
+                    <button type="button" disabled={loggingOut} onClick={() => { setOpen(false); onLogout?.(); }} className={`${menuItem} text-red-600 hover:bg-red-50 disabled:opacity-50 cursor-pointer`}>
                         {loggingOut ? <Loader2 size={16} className="animate-spin" /> : <LogOut size={16} />}Déconnexion
                     </button>
                 </div>

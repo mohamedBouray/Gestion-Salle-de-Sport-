@@ -1,14 +1,9 @@
-
 import { useEffect, useState } from "react";
-import {
-    Plus, Search, ChevronLeft, ChevronRight,
-    UsersRound, UserRoundCheck, UserRoundX,
-    Clock3, FileSpreadsheet, LoaderCircle
-} from "lucide-react";
-
+import { Plus, Search, ChevronLeft, ChevronRight, UsersRound, UserRoundCheck, UserRoundX, Clock3, FileSpreadsheet, LoaderCircle} from "lucide-react";
 import MembersTable from "../../components/admin/membre/MembersTable";
 import MemberForm from "../../components/admin/membre/MemberForm";
 import MemberDetails from "../../components/admin/membre/MemberDetails";
+
 import { adminApi } from "../../services/AdminApi";
 import { apiError } from "../../services/api";
 
@@ -19,14 +14,8 @@ const cards = [
     { key: "inactive", label: "Inactifs", icon: UserRoundX },
 ];
 
-const statusLabels = {
-    active: "Actif",
-    pending: "En attente",
-    inactive: "Bloqué",
-};
-
-const formatDate = (value) =>
-    value ? new Date(value).toLocaleDateString("fr-MA") : "";
+const statusLabels = { active: "Actif", pending: "En attente", inactive: "Bloqué",};
+const formatDate = (value) => value ? new Date(value).toLocaleDateString("fr-MA") : "";
 
 export default function MembersPage() {
     const [search, setSearch] = useState("");

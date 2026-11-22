@@ -14,10 +14,6 @@ use Throwable;
 
 class CourseService
 {
-    // =====================================
-    // LISTE + FILTRES + STATISTIQUES
-    // =====================================
-
     public function list(array $filters): array
     {
         $query = Course::query()->with('coach:id,name,status');
@@ -26,9 +22,7 @@ class CourseService
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
-                    ->orWhereHas('coach', fn ($coach) =>
-                        $coach->where('name', 'like', "%{$search}%")
-                    );
+                    ->orWhereHas('coach', fn ($coach) => $coach->where('name', 'like', "%{$search}%"));
             });
         }
 
@@ -39,170 +33,151 @@ class CourseService
         $base = Course::query();
 
         return [
-            'courses' => $query->latest('id')
-                ->withCount('sessions')
-                ->paginate($filters['per_page'] ?? 10)
-                ->withQueryString(),
-
+            'courses' => $query->latest('id')->withCount('sessions')
+                ->paginate($filters['per_page'] ?? 10)->withQueryString(),
             'stats' => [
                 'total' => (clone $base)->count(),
                 'active' => (clone $base)->where('status', 'active')->count(),
                 'inactive' => (clone $base)->where('status', 'inactive')->count(),
                 'pending' => (clone $base)->where('status', 'pending')->count(),
-
-                'scheduled_sessions' => CourseSession::query()
-                    ->where('status', 'scheduled')
-                    ->where('start_at', '>=', now())
-                    ->whereHas('course')
-                    ->count(),
+                'scheduled_sessions' => CourseSession::query()->where('status', 'scheduled')
+                    ->where('start_at', '>=', now('UTC'))->whereHas('course')->count(),
             ],
         ];
     }
 
-    // =====================================
-    // DETAILS DU COURS
-    // =====================================
-
     public function show(Course $course): Course
     {
-        return $course
-            ->load('coach:id,name,status')
-            ->loadCount('sessions')
-            ->load([
-                'sessions' => fn ($query) =>
-                    $query->orderBy('start_at')->limit(5),
-            ]);
+        return $course->load('coach:id,name,status')->loadCount('sessions')
+            ->load(['sessions' => fn ($q) => $q->orderBy('start_at')->limit(5)]);
     }
-
-    // =====================================
-    // CREATION DU COURS
-    // =====================================
 
     public function create(array $data, User $admin): Course
     {
         $imagePath = null;
-
         try {
             if (($data['image'] ?? null) instanceof UploadedFile) {
                 $imagePath = $data['image']->store('courses', 'public');
             }
+            $course = DB::transaction(fn () => Course::create([
+                'name' => trim($data['name']),
+                'description' => $data['description'] ?? null,
+                'coach_id' => $data['coach_id'] ?? null,
+                'price' => $data['price'],
+                'image' => $imagePath,
+                'status' => $data['status'] ?? 'pending',
+                'created_by_user_id' => $admin->id,
+            ]));
 
-            $course = DB::transaction(function () use ($data, $admin, $imagePath) {
-                return Course::create([
-                    'name' => trim($data['name']),
-                    'description' => $data['description'] ?? null,
-                    'coach_id' => $data['coach_id'] ?? null,
-                    'price' => $data['price'],
-                    'image' => $imagePath,
-                    'status' => $data['status'] ?? 'pending',
-                    'created_by_user_id' => $admin->id,
-                ]);
-            });
-
-            return $course
-                ->load('coach:id,name,status')
-                ->loadCount('sessions');
-
+            return $course->load('coach:id,name,status')->loadCount('sessions');
         } catch (Throwable $e) {
-            if ($imagePath) {
-                Storage::disk('public')->delete($imagePath);
-            }
-
+            if ($imagePath) Storage::disk('public')->delete($imagePath);
             throw $e;
         }
     }
 
-    // =====================================
-    // MODIFICATION DU COURS
-    // =====================================
-
     public function update(Course $course, array $data): Course
     {
         $newImage = null;
-
         try {
             if (($data['image'] ?? null) instanceof UploadedFile) {
                 $newImage = $data['image']->store('courses', 'public');
             }
 
-            [$course, $oldImage] = DB::transaction(
-                function () use ($course, $data, $newImage) {
+            [$updated, $oldImage] = $this->synchronizedPlanning(function () use ($course, $data, $newImage) {
+                $current = Course::query()->whereKey($course->id)->lockForUpdate()->firstOrFail();
+                $attributes = Arr::only($data, ['name', 'description', 'coach_id', 'price', 'status']);
+                $nextStatus = $attributes['status'] ?? $current->status;
 
-                    $current = Course::query()
-                        ->whereKey($course->id)
-                        ->lockForUpdate()
-                        ->firstOrFail();
-
-                    $oldImage = $current->image;
-
-                    $attributes = Arr::only($data, [
-                        'name',
-                        'description',
-                        'coach_id',
-                        'price',
-                        'status',
-                    ]);
-
-                    if (isset($attributes['name'])) {
-                        $attributes['name'] = trim($attributes['name']);
-                    }
-
-                    if ($newImage) {
-                        $attributes['image'] = $newImage;
-                    }
-
-                    $current->update($attributes);
-
-                    return [$current, $oldImage];
+                // Une séance programmée ne doit pas rester ouverte sur un cours désactivé.
+                if ($nextStatus !== $current->status && $nextStatus !== 'active') {
+                    $this->assertCanSuspendOrArchive($current, 'status');
                 }
-            );
 
+                // La validation Request peut autoriser le coach actuel inactif pour un simple edit.
+                // Mais pas pour activer un cours ni pour remplacer le coach sur un cours actif.
+                $coachChanged = array_key_exists('coach_id', $attributes)
+                    && (string) $attributes['coach_id'] !== (string) $current->coach_id;
+                if ($nextStatus === 'active' && ($coachChanged || $current->status !== 'active')) {
+                    $coachId = $attributes['coach_id'] ?? $current->coach_id;
+                    if ($coachId !== null && !User::query()->whereKey($coachId)
+                        ->where('role', 'coach')->where('status', 'active')->exists()) {
+                        throw ValidationException::withMessages([
+                            'coach_id' => 'Un cours actif doit avoir un coach assigné actif ou aucun coach.',
+                        ]);
+                    }
+                }
+
+                if (isset($attributes['name'])) $attributes['name'] = trim($attributes['name']);
+                $oldImage = $current->image;
+                if ($newImage) $attributes['image'] = $newImage;
+                $current->update($attributes);
+
+                return [$current, $oldImage];
+            });
         } catch (Throwable $e) {
-            if ($newImage) {
-                Storage::disk('public')->delete($newImage);
-            }
-
+            if ($newImage) Storage::disk('public')->delete($newImage);
             throw $e;
         }
 
-        // Supprimer l'ancienne image après succès DB
         if ($newImage && $oldImage && $newImage !== $oldImage) {
             Storage::disk('public')->delete($oldImage);
         }
 
-        return $course->fresh()
-            ->load('coach:id,name,status')
-            ->loadCount('sessions');
+        return $updated->fresh()->load('coach:id,name,status')->loadCount('sessions');
     }
-
-    // =====================================
-    // ARCHIVAGE DU COURS
-    // =====================================
 
     public function archive(Course $course): void
     {
-        DB::transaction(function () use ($course) {
-
-            $current = Course::query()
-                ->whereKey($course->id)
-                ->lockForUpdate()
-                ->firstOrFail();
-
-            $hasFutureSessions = $current->sessions()
-                ->where('status', 'scheduled')
-                ->where('start_at', '>=', now())
-                ->exists();
-
-            if ($hasFutureSessions) {
-                throw ValidationException::withMessages([
-                    'course' => [
-                        "Annulez d'abord les séances futures de ce cours avant de l'archiver.",
-                    ],
-                ]);
-            }
-
-            // Soft Delete : conserver l'historique
-            $current->delete();
+        $this->synchronizedPlanning(function () use ($course) {
+            $current = Course::query()->whereKey($course->id)->lockForUpdate()->firstOrFail();
+            $this->assertCanSuspendOrArchive($current, 'course');
+            $current->delete(); // SoftDelete : ne détruit pas les réservations ni les séances.
         });
+    }
+
+    private function assertCanSuspendOrArchive(Course $course, string $field): void
+    {
+        // Vérifier aussi les séances déjà commencées mais non terminées.
+        $hasSessions = $course->sessions()->where('status', 'scheduled')
+            ->where('end_at', '>', now('UTC'))->exists();
+        if ($hasSessions) {
+            throw ValidationException::withMessages([
+                $field => "Ce cours possède des séances programmées à venir ou en cours. Traitez les réservations actives puis annulez les séances futures depuis le Planning avant de continuer.",
+            ]);
+        }
+
+        // Protection supplémentaire contre un historique incohérent (séance annulée avec réservation active).
+        $hasReservations = $course->sessions()->where('end_at', '>', now('UTC'))
+            ->whereHas('enrollments', fn ($q) => $q->whereIn('status', ['pending', 'confirmed', 'attended']))
+            ->exists();
+        if ($hasReservations) {
+            throw ValidationException::withMessages([
+                $field => 'Ce cours possède encore des réservations actives à venir. Elles doivent être traitées avant cette action.',
+            ]);
+        }
+    }
+
+    // Même verrou MySQL que CourseSessionService : aucune création/modification
+    // de séance ne doit se produire au milieu d'une désactivation / d'un archivage.
+    private function synchronizedPlanning(callable $callback): mixed
+    {
+        if (DB::connection()->getDriverName() !== 'mysql') {
+            return DB::transaction($callback, 3);
+        }
+
+        $lockName = 'bouray_gym_planning';
+        $result = DB::selectOne('SELECT GET_LOCK(?, 10) AS acquired', [$lockName]);
+        if ((int) ($result->acquired ?? 0) !== 1) {
+            throw ValidationException::withMessages([
+                'course' => 'Le planning est en cours de modification. Veuillez réessayer.',
+            ]);
+        }
+
+        try {
+            return DB::transaction($callback, 3);
+        } finally {
+            DB::selectOne('SELECT RELEASE_LOCK(?) AS released', [$lockName]);
+        }
     }
 }

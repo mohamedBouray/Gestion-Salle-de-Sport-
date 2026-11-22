@@ -80,7 +80,7 @@ class ReservationService
     {
         return $enrollment->load([
             'member:id,name,email,phone',
-            'session.course:id,name,price,status',
+            'session.course' => fn (Builder $q) => $q->withTrashed()->select('id', 'name', 'price', 'status'),
             'session.coach:id,name',
         ]);
     }
@@ -89,7 +89,7 @@ class ReservationService
     {
         return CourseEnrollment::query()->with([
             'member:id,name,email,phone',
-            'session.course:id,name,price,status',
+            'session.course' => fn (Builder $q) => $q->withTrashed()->select('id', 'name', 'price', 'status'),
             'session.coach:id,name',
         ]);
     }
@@ -132,20 +132,20 @@ class ReservationService
             });
         }
     }
-
+    
     // =============================================
     // MEMBRE — SEANCES A VENIR
     // =============================================
 
     public function upcomingSessions(User $member, array $filters = []): LengthAwarePaginator
     {
-        $now = now('UTC')->format('Y-m-d H:i:s');
+        $nowUtc = now('UTC')->format('Y-m-d H:i:s');
+        $period = $filters['period'] ?? 'all';
+        $search = trim((string) ($filters['search'] ?? ''));
+        $courseId = $filters['course_id'] ?? null;
 
-        $sessions = CourseSession::query()
-            ->with([
-                'course:id,name,description,price,status',
-                'coach:id,name',
-            ])
+        $query = CourseSession::query()
+            ->with(['course:id,name,description,price,status', 'coach:id,name'])
             ->withCount([
                 'enrollments as enrolled_count' => fn (Builder $q) =>
                     $q->whereIn('status', self::SEATS_TAKEN_STATUSES),
@@ -156,11 +156,38 @@ class ReservationService
                         ->whereIn('status', self::ACTIVE_STATUSES),
             ])
             ->where('status', 'scheduled')
-            ->where('start_at', '>', $now)
-            ->whereHas('course', fn (Builder $q) =>
-                $q->where('status', 'active')
-            )
-            ->orderBy('start_at')
+            ->where('start_at', '>', $nowUtc)
+            // Ne jamais exposer les cours inactifs / archives au catalogue.
+            ->whereHas('course', fn (Builder $q) => $q->where('status', 'active'));
+
+        // TOUS les filtres sont executes dans MySQL AVANT la pagination.
+        if ($courseId !== null) {
+            $query->where('course_id', (int) $courseId);
+        }
+
+        if ($search !== '') {
+            // Les caracteres % et _ saisis sont des textes, pas des jokers SQL.
+            $like = '%' . addcslashes($search, '%_\\') . '%';
+            $query->where(function (Builder $q) use ($like): void {
+                $q->where('location', 'like', $like)
+                    ->orWhereHas('course', fn (Builder $c) => $c->where('name', 'like', $like))
+                    ->orWhereHas('coach', fn (Builder $c) => $c->where('name', 'like', $like));
+            });
+        }
+
+        // Periode calculee dans le fuseau de la salle (pas celui du navigateur).
+        $localNow = now($this->timezone());
+        if ($period === 'today') {
+            $tomorrowUtc = $localNow->copy()->addDay()->startOfDay()
+                ->utc()->format('Y-m-d H:i:s');
+            $query->where('start_at', '<', $tomorrowUtc);
+        } elseif ($period === 'week') {
+            $weekEndUtc = $localNow->copy()->addDays(7)
+                ->utc()->format('Y-m-d H:i:s');
+            $query->where('start_at', '<=', $weekEndUtc);
+        }
+
+        $sessions = $query->orderBy('start_at')->orderBy('id')
             ->paginate(
                 (int) ($filters['per_page'] ?? 12),
                 ['*'],
@@ -168,9 +195,9 @@ class ReservationService
                 (int) ($filters['page'] ?? 1)
             );
 
-        // Un créneau peut être visible sans être réservable :
-        // membre sans abonnement, séance complète, réservation existante.
-        $sessions->through(function (CourseSession $session) use ($member) {
+        // L'affichage ne garantit pas une place : book() revalide tout
+        // sous verrou (capacite, abonnement, statut, doublon).
+        $sessions->through(function (CourseSession $session) use ($member): array {
             $capacity = (int) $session->capacity;
             $remaining = max(0, $capacity - (int) $session->enrolled_count);
             $eligible = $this->hasEligibleSubscription($member, $session);

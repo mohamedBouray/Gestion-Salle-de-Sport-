@@ -7,6 +7,7 @@ import CoursesTable from "../../components/admin/courses/CoursesTable";
 import CourseForm from "../../components/admin/courses/CourseForm";
 import CourseDetails from "../../components/admin/courses/CourseDetails";
 import { coursesApi } from "../../services/CoursesApi";
+import ConfirmDialog from "../../components/shared/ConfirmDialog";
 import { apiError } from "../../services/api";
 
 const statsConfig = [
@@ -46,6 +47,7 @@ function StatCard({ item, value, loading }) {
     );
 }
 
+
 export default function CoursesPage() {
     const [search, setSearch] = useState("");
     const [query, setQuery] = useState("");
@@ -62,6 +64,8 @@ export default function CoursesPage() {
     const [notice, setNotice] = useState("");
     const [formCourse, setFormCourse] = useState(undefined); // undefined: fermé, null: nouveau
     const [detailsId, setDetailsId] = useState(null);
+    const [pendingAction, setPendingAction] = useState(null);
+    const [confirmError, setConfirmError] = useState("");
 
     useEffect(() => {
         const timer = setTimeout(() => setQuery(search.trim()), 350);
@@ -99,31 +103,41 @@ export default function CoursesPage() {
         refresh(response?.message || "Cours enregistré avec succès.");
     }
 
-    async function runAction(course, action, success) {
-        if (busyId !== null) return;
-        setBusyId(course.id);
-        setNotice("");
-        setError("");
-        try {
-            await action();
-            refresh(success);
-        } catch (err) {
-            setError(apiError(err));
-        } finally {
-            setBusyId(null);
-        }
-    }
-
     function toggleStatus(course) {
-        const next = course.status === "active" ? "inactive" : "active";
-        if (!window.confirm(`${next === "active" ? "Activer" : "Désactiver"} le cours « ${course.name} » ?`)) return;
-        runAction(course, () => coursesApi.changeStatus(course.id, next),
-            next === "active" ? "Cours activé avec succès." : "Cours désactivé avec succès.");
+        if (busyId !== null) return;
+        setConfirmError("");
+        setPendingAction({ course, kind: "status", nextStatus: course.status === "active" ? "inactive" : "active" });
     }
 
     function archiveCourse(course) {
-        if (!window.confirm(`Archiver le cours « ${course.name} » ?`)) return;
-        runAction(course, () => coursesApi.remove(course.id), "Cours archivé avec succès.");
+        if (busyId !== null) return;
+        setConfirmError("");
+        setPendingAction({ course, kind: "archive" });
+    }
+
+    function closeConfirm() {
+        if (busyId !== null) return;
+        setPendingAction(null);
+        setConfirmError("");
+    }
+
+    async function confirmAction() {
+        if (!pendingAction || busyId !== null) return;
+        const { course, kind, nextStatus } = pendingAction;
+        setBusyId(course.id);
+        setConfirmError("");
+        setError("");
+        setNotice("");
+        try {
+            if (kind === "archive") await coursesApi.remove(course.id);
+            else await coursesApi.changeStatus(course.id, nextStatus);
+            setPendingAction(null);
+            refresh(kind === "archive" ? "Cours archivé avec succès." : nextStatus === "active" ? "Cours activé avec succès." : "Cours désactivé avec succès.");
+        } catch (err) {
+            setConfirmError(apiError(err));
+        } finally {
+            setBusyId(null);
+        }
     }
 
     async function exportExcel() {
@@ -300,6 +314,18 @@ export default function CoursesPage() {
             {detailsId !== null && (
                 <CourseDetails courseId={detailsId} onClose={() => setDetailsId(null)} />
             )}
+            <ConfirmDialog
+                open={Boolean(pendingAction)}
+                title={pendingAction?.kind === "archive" ? "Archiver ce cours ?" : pendingAction?.nextStatus === "inactive" ? "Désactiver ce cours ?" : "Activer ce cours ?"}
+                description={pendingAction?.kind === "archive" ? "Ce cours disparaîtra de la gestion courante. Les données historiques seront conservées." : pendingAction?.nextStatus === "inactive" ? "Ce cours ne sera plus proposé aux membres tant qu'il sera inactif." : "Ce cours pourra de nouveau être proposé aux membres."}
+                subject={pendingAction?.course?.name}
+                subjectLabel="COURS SÉLECTIONNÉ"
+                warning={pendingAction?.kind === "archive" || pendingAction?.nextStatus === "inactive" ? "S'il existe des séances programmées à venir ou en cours, le serveur refusera cette action. Traitez d'abord les réservations et le planning." : ""}
+                variant={pendingAction?.kind === "archive" ? "danger" : pendingAction?.nextStatus === "inactive" ? "warning" : "primary"}
+                confirmLabel={pendingAction?.kind === "archive" ? "Archiver" : pendingAction?.nextStatus === "inactive" ? "Désactiver" : "Activer"}
+                loading={busyId !== null} error={confirmError}
+                onCancel={closeConfirm} onConfirm={confirmAction}
+            />
         </main>
     );
 }

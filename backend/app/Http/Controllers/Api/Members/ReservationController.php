@@ -41,6 +41,9 @@ class ReservationController extends Controller
     public function sessions(Request $request): JsonResponse
     {
         $filters = $request->validate([
+            'course_id' => ['nullable', 'integer', 'min:1'],
+            'search' => ['nullable', 'string', 'max:100'],
+            'period' => ['nullable', 'in:all,today,week'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:50'],
             'page' => ['nullable', 'integer', 'min:1'],
         ]);
