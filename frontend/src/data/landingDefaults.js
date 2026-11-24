@@ -10,10 +10,6 @@ const MENU = [
 // Nouvelle liste à chaque appel : navbar et footer ne partagent pas la même référence
 const menuLinks = () => MENU.map(([label, href]) => ({ label, href }));
 const feature = (icon, title, description) => ({ icon, title, description });
-const plan = (name, description, price, popular, features) => (
-    { name, description, price, currency: "DH", period: "/ mois", popular, features }
-);
-
 export const landingDefaults = {
     // ─────────────── NAVIGATION ───────────────
     site_name: "GYM Management",
@@ -47,23 +43,7 @@ export const landingDefaults = {
     pricing_badge: "SIMPLE & FLEXIBLE PRICING",
     pricing_title: "FLEXIBLE PLANS. STRONGER MEMBERSHIPS.",
     pricing_subtitle: "Find the right solution for your fitness business.",
-    pricing_plans: [
-        plan("Starter", "For growing fitness studios.", 199, false, [
-            "Jusqu'à 200 membres actifs",
-            "Gestion des profils membres",
-            "Suivi des abonnements",
-        ]),
-        plan("Professional", "For established fitness centers.", 449, true, [
-            "Gestion des coachs & cours",
-            "Réservations des membres",
-            "Suivi des présences",
-        ]),
-        plan("Enterprise", "For larger fitness operations.", 999, false, [
-            "Membres actifs illimités",
-            "Rapports avancés",
-            "Plans configurables",
-        ]),
-    ],
+    pricing_plans: [],
 
     // ─────────────── COACHES & CLASSES ───────────────
     trainers_badge: "VERIFIED COACHING STAFF",
@@ -79,24 +59,8 @@ export const landingDefaults = {
     trainer_courses_label: "Assigned Courses: 3 Active",
     trainer_image: "/traiter.avif",
 
-    // Les cours restent des données de démonstration.
-    classes_items: [
-        {
-            category: "HIGH INTENSITY", days: "Mon · Thu · Fri", time: "07:30 - 08:30",
-            title: "CrossFit Engine", coach: "Marcus Vance", location: "Strength Studio A",
-            enrolled: 16, capacity: 18,
-        },
-        {
-            category: "CARDIO CORE", days: "Tue · Fri", time: "18:00 - 19:15",
-            title: "HIIT & Core Conditioning", coach: "Sarah Jenkins", location: "Functional Turf",
-            enrolled: 12, capacity: 15,
-        },
-        {
-            category: "RECOVERY", days: "Wed · Sat", time: "10:00 - 11:00",
-            title: "Power Mobility & Recovery", coach: "Elena Roberts", location: "Studio B",
-            enrolled: 10, capacity: 12,
-        },
-    ],
+    // Données réelles fournies par l’API publique.
+    classes_items: [],
 
     // ─────────────── CONTACT ───────────────
     contact_title: "Ready to Upgrade Your Gym?",

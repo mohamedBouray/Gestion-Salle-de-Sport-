@@ -78,60 +78,22 @@ export const editorSections = [
     {
         id: "pricing",
         title: "Pricing",
-        subtitle: "Offres affichées sur la vitrine",
+        subtitle: "Offres réelles issues de Gestion des tarifs",
         icon: CreditCard,
         fields: introFields("pricing"),
-        list: {
-            key: "pricing_plans",
-            title: "Offres & tarifs",
-            singular: "offre",
-            max: 8,
-            initial: {
-                name: "Nouvelle offre", description: "", price: 0,
-                currency: "DH", period: "/ mois", popular: false, features: [],
-            },
-            fields: [
-                ["name", "Nom"],
-                ["description", "Description", "textarea"],
-                ["price", "Prix", "number"],
-                ["currency", "Devise"],
-                ["period", "Période"],
-                ["popular", "Offre populaire", "checkbox"],
-                ["features", "Avantages (une ligne par avantage)", "lines"],
-            ],
-        },
+
     },
     {
         id: "trainers",
         title: "Coaches & Classes",
-        subtitle: "Coach réel et cours de démonstration",
+        subtitle: "Coach mis en avant et cours réels",
         icon: Dumbbell,
         // Les infos du coach viennent de la base de données (choisi dans Gestion des coachs).
         fields: [
             ...introFields("trainers"),
             ["trainer_badge", "Badge du coach"],
         ],
-        // Les cours restent configurables depuis l'éditeur.
-        list: {
-            key: "classes_items",
-            title: "Cours de démonstration",
-            singular: "cours",
-            max: 12,
-            initial: {
-                category: "TRAINING", days: "Lundi", time: "10:00 - 11:00",
-                title: "Nouveau cours", coach: "", location: "", enrolled: 0, capacity: 20,
-            },
-            fields: [
-                ["title", "Nom du cours"],
-                ["category", "Catégorie"],
-                ["coach", "Coach"],
-                ["days", "Jours"],
-                ["time", "Horaire"],
-                ["location", "Salle"],
-                ["enrolled", "Inscrits (démo)", "number"],
-                ["capacity", "Capacité (démo)", "number"],
-            ],
-        },
+
     },
     {
         id: "contact",

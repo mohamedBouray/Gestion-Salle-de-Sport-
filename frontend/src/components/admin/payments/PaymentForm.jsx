@@ -1,3 +1,4 @@
+import FrenchDateInput from "../../shared/FrenchDateInput";
 import { useEffect, useMemo, useState } from "react";
 import { LoaderCircle, Search, X } from "lucide-react";
 
@@ -366,7 +367,7 @@ export default function PaymentForm({ onClose, onSave }) {
 
           <label className={labelClass}>
             Date et heure du paiement *
-            <input
+            <FrenchDateInput
               required
               type="datetime-local"
               value={paidAt}

@@ -1,3 +1,4 @@
+import FrenchDateInput from "../shared/FrenchDateInput";
 import { useEffect, useState } from "react";
 import { AlertCircle, Info, LoaderCircle, X } from "lucide-react";
 
@@ -16,7 +17,6 @@ const inputClass =
 
 const statusOptions = [
   { value: "scheduled", label: "Programmée" },
-  { value: "completed", label: "Terminée" },
   { value: "cancelled", label: "Annulée" },
 ];
 
@@ -51,7 +51,7 @@ function localDateTime(value) {
   );
 }
 
-function initialForm(session) {
+function initialForm(session, initialDate = "") {
   if (session) {
     return {
       course_id: String(session.course_id ?? session.course?.id ?? ""),
@@ -68,6 +68,11 @@ function initialForm(session) {
   start.setMinutes(0, 0, 0);
   start.setHours(start.getHours() + 1);
 
+  if (initialDate && initialDate > localDateTime(start).slice(0, 10)) {
+    const [year, month, day] = initialDate.split("-").map(Number);
+    start.setFullYear(year, month - 1, day);
+    start.setHours(9, 0, 0, 0);
+  }
   const end = new Date(start);
   end.setHours(end.getHours() + 1);
 
@@ -112,6 +117,7 @@ function Field({ label, required = false, error = "", children, className = "" }
 
 export default function SessionModal({
   session = null,
+  initialDate = "",
   courses = [],
   coaches = [],
   onClose,
@@ -120,7 +126,7 @@ export default function SessionModal({
 }) {
   const isEditing = Boolean(session?.id);
 
-  const [form, setForm] = useState(() => initialForm(session));
+  const [form, setForm] = useState(() => initialForm(session, initialDate));
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -253,7 +259,7 @@ export default function SessionModal({
       if (!form.start_at || Number.isNaN(start.getTime())) problems.start_at = "Date de début invalide.";
       if (!form.end_at || Number.isNaN(end.getTime())) problems.end_at = "Date de fin invalide.";
       if (!problems.start_at && !problems.end_at && end <= start) problems.end_at = "La fin doit être après le début.";
-      if (!isEditing && !problems.start_at && start <= new Date()) problems.start_at = "La séance doit commencer dans le futur.";
+      if (!problems.start_at && start <= new Date()) problems.start_at = "La séance doit commencer dans le futur.";
       if (!/^[1-9]\d*$/.test(String(form.capacity)) || Number(form.capacity) > 1000) problems.capacity = "Capacité entière entre 1 et 1000.";
       if (form.location.trim().length > 160) problems.location = "160 caractères maximum.";
     }
@@ -434,9 +440,10 @@ export default function SessionModal({
 
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Début de séance" required error={fieldErrors.start_at}>
-                <input
+                <FrenchDateInput
                   type="datetime-local"
                   required
+                  min={localDateTime(new Date(Date.now() + 60000))}
                   value={form.start_at}
                   onChange={(event) => change("start_at", event.target.value)}
                   className={inputClass}
@@ -444,10 +451,10 @@ export default function SessionModal({
               </Field>
 
               <Field label="Fin de séance" required error={fieldErrors.end_at}>
-                <input
+                <FrenchDateInput
                   type="datetime-local"
                   required
-                  min={form.start_at || undefined}
+                  min={form.start_at || localDateTime(new Date(Date.now() + 60000))}
                   value={form.end_at}
                   onChange={(event) => change("end_at", event.target.value)}
                   className={inputClass}
@@ -483,7 +490,7 @@ export default function SessionModal({
                   onChange={(event) => change("status", event.target.value)}
                   className={inputClass}
                 >
-                  {statusOptions.map((option) => (
+                  {statusOptions.filter((option) => isEditing || option.value === "scheduled").map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>

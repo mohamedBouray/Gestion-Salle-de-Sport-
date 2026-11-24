@@ -1,3 +1,4 @@
+import FrenchDateInput from "../../shared/FrenchDateInput";
 import { RotateCcw, Search, X } from "lucide-react";
 
 const controlClass =
@@ -90,7 +91,7 @@ export default function ReservationsFilters({
 
       {/* DATE */}
 
-      <input
+      <FrenchDateInput
         type="date"
         value={filters.date ?? ""}
         onChange={(event) => onChange({ date: event.target.value })}

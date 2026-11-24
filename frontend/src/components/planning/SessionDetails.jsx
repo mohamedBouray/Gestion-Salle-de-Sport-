@@ -37,9 +37,8 @@ function formatDate(value) {
   if (!date) return "Non renseignée";
 
   return new Intl.DateTimeFormat("fr-MA", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
+    day: "2-digit",
+    month: "2-digit",
     year: "numeric",
   }).format(date);
 }
@@ -154,7 +153,7 @@ export default function SessionDetails({
 
   const capacity = capacityInfo(session || {});
 
-  const canCancel = session?.status === "scheduled";
+  const canCancel = session?.status === "scheduled" && new Date(session.start_at).getTime() > Date.now();
 
   // =====================================
   // CLOSE ON ESCAPE
@@ -350,7 +349,7 @@ export default function SessionDetails({
           <button
             type="button"
             onClick={() => onEdit(session)}
-            disabled={busy}
+            disabled={busy || !canCancel}
             className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-blue-700 disabled:opacity-50"
           >
             <Pencil size={14} />

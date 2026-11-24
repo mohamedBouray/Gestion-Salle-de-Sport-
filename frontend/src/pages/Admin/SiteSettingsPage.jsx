@@ -504,7 +504,7 @@ export default function SiteSettingsPage() {
 
             const settings = Object.fromEntries(
 
-                Object.entries(form).filter(([key]) => !imageKeys.includes(key))
+                Object.entries(form).filter(([key]) => !imageKeys.includes(key) && !["pricing_plans", "classes_items"].includes(key))
 
             );
 
@@ -770,10 +770,16 @@ export default function SiteSettingsPage() {
 
                                 Le coach affiché sur la Landing Page vient de Gestion des coachs (un seul coach actif).
 
-                                Les cours ci-dessous sont des données vitrine de démonstration.
+                                Ses cours actifs et leurs prochaines séances sont chargés automatiquement depuis le planning.
 
                             </p>
 
+                        )}
+
+                        {section.id === "pricing" && !loading && (
+                            <p className="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-xs leading-5 text-blue-800">
+                                Les trois offres sont chargées automatiquement depuis Gestion des tarifs : deux offres générales et une spécifique si disponibles. Seules les offres actives sont affichées.
+                            </p>
                         )}
 
                         <div className="flex justify-end">

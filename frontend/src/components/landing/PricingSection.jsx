@@ -4,6 +4,7 @@ import { Check } from "lucide-react";
 
 export default function PricingSection() {
     const s = useLandingSettings();
+    const plans = Array.isArray(s.pricing_plans) ? s.pricing_plans : [];
     return (
         <section id="pricing" className="w-full bg-white px-4 py-14 sm:px-6 lg:px-8 lg:py-10" >
             <div className="w-full">
@@ -21,9 +22,14 @@ export default function PricingSection() {
                 {/* Pricing Cards */}
                 <div className="grid w-full grid-cols-1 items-stretch gap-5 md:grid-cols-2 lg:grid-cols-3">
 
-                    {(s.pricing_plans || []).map((plan, i) => (
+                    {plans.length === 0 && (
+                        <p className="col-span-full rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-500">
+                            Aucun abonnement disponible pour le moment.
+                        </p>
+                    )}
+                    {plans.map((plan, i) => (
                         <AnimatedContent
-                            key={i}
+                            key={plan.id ?? i}
                             direction="vertical"
                             distance={20}
                             duration={0.6}
@@ -39,6 +45,7 @@ export default function PricingSection() {
                                     </span>
                                 )}
 
+                                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-blue-600">{plan.type_label}</p>
                                 {/* Name */}
                                 <h3 className="text-xl font-bold text-slate-900">
                                     {plan.name}

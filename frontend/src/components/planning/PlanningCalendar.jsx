@@ -24,10 +24,6 @@ function getDayName(value) {
   return new Intl.DateTimeFormat("fr-MA", { weekday: "long" }).format(value);
 }
 
-function getMonthName(value) {
-  return new Intl.DateTimeFormat("fr-MA", { month: "short" }).format(value);
-}
-
 // ========================================
 // DAY COLUMN
 // ========================================
@@ -36,6 +32,7 @@ function DayColumn({
   day,
   sessions,
   isToday,
+  isPast,
   onViewSession,
   onEditSession,
   onCreateSession,
@@ -68,15 +65,8 @@ function DayColumn({
           </p>
 
           <p className="mt-0.5 flex items-baseline gap-1">
-            <span className="text-lg font-bold leading-none">
-              {day.getDate()}
-            </span>
-            <span
-              className={`text-xs capitalize ${
-                isToday ? "text-blue-100" : "text-slate-400"
-              }`}
-            >
-              {getMonthName(day)}
+            <span className="text-sm font-bold tabular-nums leading-none">
+              {new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(day)}
             </span>
           </p>
         </div>
@@ -113,14 +103,15 @@ function DayColumn({
           ))
         )}
 
-        <button
+        {!isPast && <button
           type="button"
-          onClick={onCreateSession}
+          onClick={() => onCreateSession(day)}
+          disabled={busy}
           className="mt-auto flex h-8 items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-200 text-xs font-semibold text-slate-400 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-600"
         >
           <Plus size={14} />
           Ajouter
-        </button>
+        </button>}
       </div>
     </section>
   );
@@ -137,8 +128,9 @@ export default function PlanningCalendar({
   onEditSession,
   onCreateSession,
   busy = false,
+  now = Date.now(),
 }) {
-  const todayKey = dateKey(new Date());
+  const todayKey = dateKey(new Date(now));
 
   return (
     <div className="overflow-x-auto p-3">
@@ -152,6 +144,7 @@ export default function PlanningCalendar({
               day={day}
               sessions={sessionsByDay[key] ?? []}
               isToday={key === todayKey}
+              isPast={key < todayKey}
               onViewSession={onViewSession}
               onEditSession={onEditSession}
               onCreateSession={onCreateSession}

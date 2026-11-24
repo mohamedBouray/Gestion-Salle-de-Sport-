@@ -1,4 +1,5 @@
-import { CalendarDays, Search, RotateCcw } from "lucide-react";
+import FrenchDateInput from "../../shared/FrenchDateInput";
+import { Search, RotateCcw } from "lucide-react";
 
 const inputStyle = "h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-xs font-medium text-slate-700 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-100";
 
@@ -12,10 +13,9 @@ export default function AttendanceFilters({ filters, onChange, onReset, today })
           onChange={(e) => onChange({ search: e.target.value })} />
       </label>
       <label className="relative w-full sm:w-44">
-        <CalendarDays size={16} className="pointer-events-none absolute left-3 top-3 text-slate-400" />
         <span className="sr-only">Date du pointage</span>
-        <input type="date" value={filters.date} max={today} onChange={(e) => onChange({ date: e.target.value })}
-          className={inputStyle} />
+        <FrenchDateInput type="date" value={filters.date} max={today} onChange={(e) => onChange({ date: e.target.value })}
+          className={inputStyle.replace("pl-10", "pl-3")} />
       </label>
       <label className="w-full sm:w-40">
         <span className="sr-only">Filtrer par statut</span>

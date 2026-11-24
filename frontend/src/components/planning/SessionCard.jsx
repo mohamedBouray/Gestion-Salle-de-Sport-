@@ -232,7 +232,7 @@ export default function SessionCard({
           <button
             type="button"
             onClick={onEdit}
-            disabled={busy}
+            disabled={busy || session.status !== "scheduled" || new Date(session.start_at).getTime() <= Date.now()}
             aria-label={`Modifier ${courseName}`}
             title="Modifier la séance"
             className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 disabled:cursor-not-allowed disabled:opacity-50"

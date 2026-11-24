@@ -157,6 +157,37 @@ class GymWorkflowTest extends TestCase
             ->assertCreated()->assertJsonPath('user.role', 'admin');
     }
 
+    public function test_elapsed_sessions_are_completed_and_past_creation_is_rejected(): void
+    {
+        $this->travelTo(\Carbon\Carbon::parse('2026-11-24 12:00:00', 'UTC'));
+        $admin = $this->user('admin');
+        $coach = $this->user('coach');
+        $course = $this->course($coach);
+        $make = fn ($start, $end, $status = 'scheduled') => CourseSession::create([
+            'course_id' => $course->id, 'coach_id' => $coach->id,
+            'start_at' => $start, 'end_at' => $end, 'capacity' => 8, 'status' => $status,
+        ]);
+        $past = $make(now('UTC')->subHours(2), now('UTC')->subHour());
+        $boundary = $make(now('UTC')->subHour(), now('UTC'));
+        $future = $make(now('UTC')->addHour(), now('UTC')->addHours(2));
+        $cancelled = $make(now('UTC')->subHours(3), now('UTC')->subHours(2), 'cancelled');
+        $this->artisan('gym:complete-sessions')->assertSuccessful();
+        $this->assertSame('completed', $past->fresh()->status);
+        $this->assertSame('completed', $boundary->fresh()->status);
+        $this->assertSame('scheduled', $future->fresh()->status);
+        $this->assertSame('cancelled', $cancelled->fresh()->status);
+        $this->assertSame(0, CourseSession::completeElapsed());
+        $late = $make(now('UTC')->subHours(4), now('UTC')->subHours(3));
+        $this->actingAs($admin)->getJson('/api/admin/course-sessions?from=2026-11-24&to=2026-11-24&status=completed')
+            ->assertOk()->assertJsonCount(3, 'sessions');
+        $this->assertSame('completed', $late->fresh()->status);
+        $this->postJson('/api/admin/course-sessions', [
+            'course_id' => $course->id, 'coach_id' => $coach->id,
+            'start_at' => now('UTC')->subDay()->toIso8601String(),
+            'end_at' => now('UTC')->subDay()->addHour()->toIso8601String(), 'capacity' => 8,
+        ])->assertJsonValidationErrors('start_at');
+    }
+
     private function user(string $role): User
     {
         return User::factory()->create(['role' => $role, 'status' => 'active']);

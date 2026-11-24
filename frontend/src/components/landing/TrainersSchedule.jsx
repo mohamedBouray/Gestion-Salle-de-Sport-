@@ -7,56 +7,11 @@ const categoryColors = [
     "text-violet-600 bg-violet-50",
 ];
 
-const normalizeName = (value) =>
-    String(value ?? "")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .toLowerCase()
-        .trim()
-        .replace(/^coach\s+/, "")
-        .replace(/[^a-z0-9\s]/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-
-const belongsToCoach = (course, coach) => {
-    if (!course || !coach) return false;
-
-    const courseCoachId =
-        course.coach_id ??
-        course.coachId ??
-        (typeof course.coach === "object"
-            ? course.coach?.id
-            : null);
-
-    // Priorité à l'identifiant unique
-    if (courseCoachId != null) {
-        return String(courseCoachId) === String(coach.id);
-    }
-
-    // Compatibilité avec les données existantes
-    const courseCoachName =
-        typeof course.coach === "string"
-            ? course.coach
-            : course.coach?.name ?? course.coach_name ?? "";
-
-    const name = normalizeName(courseCoachName);
-
-    return name !== "" && name === normalizeName(coach.name);
-};
-
 export default function TrainersSchedule() {
     const s = useLandingSettings();
     const coach = s.featured_coach ?? null;
-
-    const allCourses = Array.isArray(s.classes_items)
-        ? s.classes_items
-        : [];
-
-    // Afficher uniquement les cours du coach sélectionné
-    const coachCourses = coach
-        ? allCourses.filter((course) =>
-              belongsToCoach(course, coach)
-          )
+    const coachCourses = coach && Array.isArray(s.classes_items)
+        ? s.classes_items.filter((course) => String(course.coach_id) === String(coach.id))
         : [];
 
     return (
@@ -127,7 +82,7 @@ export default function TrainersSchedule() {
                                     </p>
 
                                     <p className="mt-5 border-t border-slate-100 pt-4 text-xs text-slate-500">
-                                        {coach.courses_count ?? 0} cours associés
+                                        {coach.courses_count ?? 0} cours actifs
                                     </p>
                                 </>
                             ) : (
@@ -165,7 +120,7 @@ export default function TrainersSchedule() {
 
                                 <p className="mt-2 max-w-[280px] text-xs leading-relaxed text-slate-500">
                                     {coach
-                                        ? "Aucun cours de ce coach dans le planning affiché."
+                                        ? "Ce coach ne dispose actuellement d’aucun cours actif."
                                         : "Aucun coach sélectionné pour le moment."}
                                 </p>
                             </div>
@@ -203,9 +158,9 @@ export default function TrainersSchedule() {
 
                                                     <span className="flex items-center gap-1 text-[11px] text-slate-500">
                                                         <CalendarDays size={12} />
-                                                        {course.days || "À définir"}
-                                                        {" · "}
-                                                        {course.time || "À définir"}
+                                                        {course.session_id
+                                                            ? `${course.days} · ${course.time}`
+                                                            : "Aucune séance à venir"}
                                                     </span>
                                                 </div>
 
@@ -223,22 +178,23 @@ export default function TrainersSchedule() {
 
                                             <div className="border-t border-slate-100 pt-3 text-right sm:border-0 sm:pt-0">
 
+                                                {course.session_id ? (<>
                                                 <div className="text-[13px] font-bold">
                                                     <span className="text-blue-600">
                                                         {enrolled}
                                                     </span>
                                                     {" / "}
-                                                    {capacity} Spots
+                                                    {capacity} places
                                                 </div>
 
                                                 <div className="mt-1 flex justify-end gap-1 text-[10px] text-emerald-600">
                                                     <CheckCircle2 size={12} />
-                                                    {remaining} remaining
+                                                    {remaining} disponibles
                                                 </div>
 
-                                                <span className="mt-2 inline-flex rounded bg-blue-50 px-4 py-1.5 text-xs font-semibold text-blue-600">
-                                                    Preview
-                                                </span>
+                                                </>) : (
+                                                    <span className="text-xs text-slate-500">Planning à venir</span>
+                                                )}
                                             </div>
                                         </article>
                                     );

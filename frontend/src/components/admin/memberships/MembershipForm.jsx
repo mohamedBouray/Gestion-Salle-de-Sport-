@@ -1,3 +1,4 @@
+import FrenchDateInput from "../../shared/FrenchDateInput";
 
 import { useEffect, useMemo, useState } from "react";
 import { LoaderCircle, Search, X } from "lucide-react";
@@ -227,7 +228,7 @@ export default function MembershipForm({
 
           <label className="block text-xs font-semibold text-slate-700">
             Date de début
-            <input
+            <FrenchDateInput
               required
               type="date"
               value={startsAt}

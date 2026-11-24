@@ -51,6 +51,9 @@ class CourseSessionService
             ]);
         }
 
+        // Synchronize before filtering, including when the scheduler is offline.
+        CourseSession::completeElapsed();
+
         $query = CourseSession::query()
             ->with([
                 'course:id,name,description,price,status',

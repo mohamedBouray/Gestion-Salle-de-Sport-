@@ -1,4 +1,3 @@
-
 name: gym-clean
 
 services:
@@ -20,7 +19,7 @@ services:
             - "8001:8000"
         volumes:
             - ./backend:/app
-        environment:
+        environment: &backend_environment
             APP_ENV: local
             APP_DEBUG: "true"
             DB_CONNECTION: mysql
@@ -32,6 +31,19 @@ services:
         depends_on:
             db:
                 condition: service_healthy
+
+    scheduler:
+        build: ./backend
+        command: ["php", "artisan", "schedule:work"]
+        volumes:
+            - ./backend:/app
+        environment: *backend_environment
+        depends_on:
+            db:
+                condition: service_healthy
+            backend:
+                condition: service_started
+        restart: unless-stopped
 
     db:
         image: mysql:8.4

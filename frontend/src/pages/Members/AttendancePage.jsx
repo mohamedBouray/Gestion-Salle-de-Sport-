@@ -1,3 +1,4 @@
+import FrenchDateInput from "../../components/shared/FrenchDateInput";
 
 import { useEffect, useState } from "react";
 
@@ -176,7 +177,7 @@ export default function AttendancePage() {
 
                     <label className="flex items-center gap-2 text-[11px] text-slate-500">
                         Du
-                        <input
+                        <FrenchDateInput
                             type="date"
                             value={from}
                             max={to || undefined}
@@ -190,7 +191,7 @@ export default function AttendancePage() {
 
                     <label className="flex items-center gap-2 text-[11px] text-slate-500">
                         Au
-                        <input
+                        <FrenchDateInput
                             type="date"
                             value={to}
                             min={from || undefined}

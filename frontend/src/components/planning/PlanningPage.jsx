@@ -74,8 +74,9 @@ function extractCollection(response, key) {
 
 function formatDate(date) {
   return new Intl.DateTimeFormat("fr-MA", {
-    day: "numeric",
-    month: "short",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
   }).format(date);
 }
 
@@ -93,7 +94,18 @@ export default function PlanningPage({ role = "admin" }) {
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
 
   // Data
-  const [sessions, setSessions] = useState([]);
+  const [rawSessions, setSessions] = useState([]);
+  const [clock, setClock] = useState(() => Date.now());
+  const [creationDate, setCreationDate] = useState("");
+  useEffect(() => {
+    const timer = window.setInterval(() => setClock(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+  const sessions = useMemo(() => rawSessions.map((session) =>
+    session.status === "scheduled" && new Date(session.end_at).getTime() <= clock
+      ? { ...session, status: "completed" }
+      : session
+  ), [rawSessions, clock]);
   const [courses, setCourses] = useState([]);
   const [coaches, setCoaches] = useState([]);
 
@@ -133,7 +145,7 @@ export default function PlanningPage({ role = "admin" }) {
     year: "numeric",
   }).format(weekStart);
 
-  const todayKey = dateKey(new Date());
+  const todayKey = dateKey(new Date(clock));
   const isCurrentWeek = days.some((day) => dateKey(day) === todayKey);
 
   // ========================================
@@ -359,13 +371,17 @@ export default function PlanningPage({ role = "admin" }) {
   // SESSION ACTIONS
   // ========================================
 
-  function createSession() {
+  function createSession(day) {
+    const key = day instanceof Date ? dateKey(day) : "";
+    if (key && key < dateKey(new Date())) return;
+    setCreationDate(key);
     setError("");
     setNotice("");
     setEditingSession(null);
   }
 
   function editSession(session) {
+    if (session.status !== "scheduled" || new Date(session.start_at).getTime() <= Date.now()) return;
     setDetailsId(null);
     setEditingSession(session);
   }
@@ -576,6 +592,7 @@ export default function PlanningPage({ role = "admin" }) {
               onEditSession={editSession}
               onCreateSession={createSession}
               busy={saving}
+              now={clock}
             />
           )}
         </section>
@@ -584,6 +601,7 @@ export default function PlanningPage({ role = "admin" }) {
       {editingSession !== undefined && (
         <SessionModal
           session={editingSession}
+          initialDate={creationDate}
           courses={courses}
           coaches={coaches}
           onClose={() => setEditingSession(undefined)}

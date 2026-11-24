@@ -31,6 +31,15 @@ class CourseSession extends Model
         'capacity' => 'integer',
     ];
 
+    /** Persist elapsed sessions without changing cancellations or attendance. */
+    public static function completeElapsed(): int
+    {
+        return static::query()
+            ->where('status', 'scheduled')
+            ->where('end_at', '<=', now('UTC')->toDateTimeString())
+            ->update(['status' => 'completed']);
+    }
+
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class, 'course_id');
