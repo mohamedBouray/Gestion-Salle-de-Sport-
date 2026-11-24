@@ -1,4 +1,3 @@
-
 import {
   CalendarDays,
   CreditCard,
@@ -48,9 +47,7 @@ function money(value) {
   }).format(Number(value) || 0)} MAD`;
 }
 
-export default function MembershipCard({
-  membership,
-}) {
+export default function MembershipCard({ membership, onCheckout }) {
   const status =
     membership.effective_status ||
     membership.status;
@@ -131,6 +128,15 @@ export default function MembershipCard({
         </div>
       </div>
 
+      {membership.remaining_amount != null && <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
+        <span className="text-slate-500">Reste à simuler</span>
+        <strong className="text-slate-900">{money(membership.remaining_amount)}</strong>
+      </div>}
+      {Number(membership.price_at_purchase) > 0 && status === "pending" && Number(membership.remaining_amount) > 0 && onCheckout && <button
+        type="button" onClick={() => onCheckout(membership)}
+        className="mt-3 inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2.5 text-xs font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300">
+        Simuler le règlement
+      </button>}
       <div className="mt-auto pt-4">
         <div
           className={`flex items-center gap-2 rounded-lg px-3 py-2 text-[11px] font-semibold ${

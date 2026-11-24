@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from "react";
 import { LoaderCircle, Search, X } from "lucide-react";
 
@@ -27,7 +26,6 @@ export default function PaymentForm({ onClose, onSave }) {
   const [subscriptionId, setSubscriptionId] = useState("");
 
   const [amount, setAmount] = useState("");
-  const [method, setMethod] = useState("cash");
   const [paidAt, setPaidAt] = useState(localDateTime());
   const [reference, setReference] = useState("");
   const [notes, setNotes] = useState("");
@@ -166,6 +164,10 @@ export default function PaymentForm({ onClose, onSave }) {
       return;
     }
 
+    if (selectedSubscription && Number(amount) > Number(selectedSubscription.remaining_amount ?? selectedSubscription.price_at_purchase)) {
+      setError("Le montant dépasse le solde restant de l'abonnement."); return;
+    }
+    if (!/^\d+(?:\.\d{1,2})?$/.test(amount.trim())) { setError("Saisissez un montant avec 2 décimales maximum."); return; }
     if (!paidAt || Number.isNaN(new Date(paidAt).getTime())) {
       setError("Indiquez une date de paiement valide.");
       return;
@@ -179,7 +181,7 @@ export default function PaymentForm({ onClose, onSave }) {
         member_id: Number(memberId),
         subscription_id: Number(subscriptionId),
         amount: value.toFixed(2),
-        method,
+        method: "demo",
         paid_at: paidAt,
         reference: reference.trim() || null,
         notes: notes.trim() || null,
@@ -206,7 +208,7 @@ export default function PaymentForm({ onClose, onSave }) {
             </h2>
 
             <p className="mt-1 text-xs text-slate-500">
-              Enregistrer un règlement reçu
+              Saisir un règlement simulé
             </p>
           </div>
 
@@ -328,7 +330,7 @@ export default function PaymentForm({ onClose, onSave }) {
 
               {selectedSubscription.remaining_amount != null && (
                 <p className="mt-1">
-                  Reste à payer :{" "}
+                  Reste à simuler :{" "}
                   <strong>
                     {Number(
                       selectedSubscription.remaining_amount
@@ -356,18 +358,10 @@ export default function PaymentForm({ onClose, onSave }) {
               />
             </label>
 
-            <label className={labelClass}>
-              Mode de paiement *
-              <select
-                value={method}
-                onChange={(e) => setMethod(e.target.value)}
-                className={inputClass}
-              >
-                <option value="cash">Espèces</option>
-                <option value="virement">Virement</option>
-                <option value="other">Autre</option>
-              </select>
-            </label>
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2.5">
+              <p className="text-xs font-bold text-emerald-800">Règlement simulé</p>
+              <p className="mt-1 text-[11px] text-emerald-700">Montant fictif affecté à cet abonnement.</p>
+            </div>
           </div>
 
           <label className={labelClass}>
@@ -387,7 +381,7 @@ export default function PaymentForm({ onClose, onSave }) {
               value={reference}
               maxLength={120}
               onChange={(e) => setReference(e.target.value)}
-              placeholder="N° reçu ou référence virement"
+              placeholder="Référence de simulation"
               className={inputClass}
             />
           </label>
@@ -405,7 +399,7 @@ export default function PaymentForm({ onClose, onSave }) {
           </label>
 
           <p className="rounded-lg bg-amber-50 p-3 text-[11px] leading-5 text-amber-800">
-            Enregistrez uniquement un paiement réellement reçu.
+            Aucun encaissement ne sera effectué.
             Cette action ne déclenche aucun débit bancaire ni
             activation automatique d'abonnement.
           </p>

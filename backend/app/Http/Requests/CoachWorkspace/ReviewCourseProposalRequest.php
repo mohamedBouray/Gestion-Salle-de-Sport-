@@ -21,11 +21,10 @@ class ReviewCourseProposalRequest extends FormRequest
 
     public function rules(): array
     {
-        $approve = $this->is('api/admin/course-proposals/*/approve');
         $reject = $this->is('api/admin/course-proposals/*/reject');
         return [
             'price' => [
-                'bail', Rule::requiredIf($approve), 'nullable', 'numeric', 'min:0', 'max:999999',
+                'bail', 'nullable', 'numeric', 'min:0', 'max:999999',
                 'regex:/\A(?:0|[1-9][0-9]{0,5})(?:\.[0-9]{1,2})?\z/D',
             ],
             'note' => ['bail', Rule::requiredIf($reject), 'nullable', 'string', 'max:1000'],
@@ -35,7 +34,6 @@ class ReviewCourseProposalRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'price.required' => "Indiquez le prix du cours.",
             'price.numeric' => 'Le prix doit être numérique.',
             'price.min' => 'Le prix doit être positif ou nul.',
             'price.max' => 'Le prix ne doit pas dépasser 999999 MAD.',

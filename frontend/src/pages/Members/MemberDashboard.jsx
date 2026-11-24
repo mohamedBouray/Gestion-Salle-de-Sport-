@@ -17,7 +17,7 @@ const stats = [
   { key: "reservations_total", label: "Mes réservations", icon: CalendarDays, to: "/member/reservations" },
   { key: "visits_month", label: "Visites ce mois", icon: ClipboardCheck, to: "/member/attendance" },
   { key: "visits_total", label: "Total visites", icon: Clock3, to: "/member/attendance" },
-  { key: "paid_total", label: "Paiements enregistrés nets", icon: WalletCards, to: "/member/payments", unit: "money" },
+  { key: "simulated_total", label: "Montant simulé", icon: WalletCards, to: "/member/payments", unit: "money" },
 ];
 
 const links = [
@@ -83,7 +83,7 @@ export default function MemberDashboard() {
             <div className="grid gap-4 xl:grid-cols-2">
               <TrendChart title="Mes visites à la salle" subtitle="Entrées enregistrées à l'accueil" data={charts.visits} color="#2563eb" />
               <TrendChart title="Mes réservations" subtitle="Réservations créées par période" data={charts.reservations} type="bar" color="#06b6d4" />
-              <TrendChart title="Mes paiements" subtitle="Paiements encaissés, hors remboursements" data={charts.payments} color="#10b981" money />
+              <TrendChart title="Mes règlements simulés" subtitle="Hors remboursements simulés" data={charts.simulated_payments} color="#10b981" money />
               <DistributionChart title="Statuts de mes réservations" subtitle="Répartition sur la période" data={charts.reservation_status} />
             </div>
           </section>

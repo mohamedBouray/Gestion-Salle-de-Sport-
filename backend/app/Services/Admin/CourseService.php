@@ -57,23 +57,27 @@ class CourseService
         $imagePath = null;
         try {
             if (($data['image'] ?? null) instanceof UploadedFile) {
-                $imagePath = $data['image']->store('courses', 'public');
+                $imagePath = $this->storeImage($data['image']);
             }
-            $course = DB::transaction(fn () => Course::create([
-                'name' => trim($data['name']),
-                'description' => $data['description'] ?? null,
-                'coach_id' => $data['coach_id'] ?? null,
-                'price' => $data['price'],
-                'image' => $imagePath,
-                'status' => $data['status'] ?? 'pending',
-                'created_by_user_id' => $admin->id,
-            ]));
+            $course = DB::transaction(function () use ($data, $admin, $imagePath) {
+                $this->assertActiveCoach($data['coach_id'] ?? null);
 
-            return $course->load('coach:id,name,status')->loadCount('sessions');
+                return Course::create([
+                    'name' => trim($data['name']),
+                    'description' => $data['description'] ?? null,
+                    'coach_id' => $data['coach_id'] ?? null,
+                    'price' => $data['price'] ?? '0.00',
+                    'image' => $imagePath,
+                    'status' => $data['status'] ?? 'pending',
+                    'created_by_user_id' => $admin->id,
+                ]);
+            });
         } catch (Throwable $e) {
             if ($imagePath) Storage::disk('public')->delete($imagePath);
             throw $e;
         }
+
+        return $course->load('coach:id,name,status')->loadCount('sessions');
     }
 
     public function update(Course $course, array $data): Course
@@ -81,7 +85,7 @@ class CourseService
         $newImage = null;
         try {
             if (($data['image'] ?? null) instanceof UploadedFile) {
-                $newImage = $data['image']->store('courses', 'public');
+                $newImage = $this->storeImage($data['image']);
             }
 
             [$updated, $oldImage] = $this->synchronizedPlanning(function () use ($course, $data, $newImage) {
@@ -98,14 +102,9 @@ class CourseService
                 // Mais pas pour activer un cours ni pour remplacer le coach sur un cours actif.
                 $coachChanged = array_key_exists('coach_id', $attributes)
                     && (string) $attributes['coach_id'] !== (string) $current->coach_id;
-                if ($nextStatus === 'active' && ($coachChanged || $current->status !== 'active')) {
-                    $coachId = $attributes['coach_id'] ?? $current->coach_id;
-                    if ($coachId !== null && !User::query()->whereKey($coachId)
-                        ->where('role', 'coach')->where('status', 'active')->exists()) {
-                        throw ValidationException::withMessages([
-                            'coach_id' => 'Un cours actif doit avoir un coach assigné actif ou aucun coach.',
-                        ]);
-                    }
+                if ($coachChanged || ($nextStatus === 'active' && $current->status !== 'active')) {
+                    $coachId = array_key_exists('coach_id', $attributes) ? $attributes['coach_id'] : $current->coach_id;
+                    $this->assertActiveCoach($coachId);
                 }
 
                 if (isset($attributes['name'])) $attributes['name'] = trim($attributes['name']);
@@ -125,6 +124,24 @@ class CourseService
         }
 
         return $updated->fresh()->load('coach:id,name,status')->loadCount('sessions');
+    }
+
+    private function storeImage(UploadedFile $image): string
+    {
+        $path = $image->store('courses', 'public');
+        if ($path === false) {
+            throw ValidationException::withMessages(['image' => "L’image n’a pas pu être enregistrée."]);
+        }
+
+        return $path;
+    }
+
+    private function assertActiveCoach(int|string|null $coachId): void
+    {
+        if ($coachId !== null && !User::query()->whereKey($coachId)
+            ->where('role', 'coach')->where('status', 'active')->lockForUpdate()->first(['id'])) {
+            throw ValidationException::withMessages(['coach_id' => 'Le coach sélectionné doit être actif.']);
+        }
     }
 
     public function archive(Course $course): void

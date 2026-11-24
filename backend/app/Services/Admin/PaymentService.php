@@ -5,6 +5,8 @@ namespace App\Services\Admin;
 use App\Models\MemberSubscription;
 use App\Models\Payment;
 use App\Models\User;
+use App\Services\FinanceLedger;
+use Illuminate\Support\Str;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -77,7 +79,7 @@ class PaymentService
                 self::TZ
             )->startOfDay()->utc()->toDateTimeString();
 
-            $query->where('paid_at', '>=', $from);
+            $query->whereRaw('COALESCE(payments.paid_at, payments.created_at) >= ?', [$from]);
         }
 
         if (!empty($filters['to'])) {
@@ -87,7 +89,7 @@ class PaymentService
                 self::TZ
             )->endOfDay()->utc()->toDateTimeString();
 
-            $query->where('paid_at', '<=', $to);
+            $query->whereRaw('COALESCE(payments.paid_at, payments.created_at) <= ?', [$to]);
         }
 
         $payments = $query
@@ -100,7 +102,7 @@ class PaymentService
                     $q->withTrashed()
                       ->select('id', 'name'),
             ])
-            ->orderByDesc('paid_at')
+            ->orderByRaw('COALESCE(payments.paid_at, payments.created_at) DESC')
             ->orderByDesc('id')
             ->paginate((int) ($filters['per_page'] ?? 9))
             ->withQueryString();
@@ -114,6 +116,7 @@ class PaymentService
 
             'stats' => [
                 'total' => (clone $base)->count(),
+                'simulated' => (clone $base)->where('method', 'demo')->where('status', 'simulated')->count(),
 
                 'paid' => (clone $base)
                     ->where('status', 'paid')
@@ -124,9 +127,14 @@ class PaymentService
                     ->count(),
 
                 // Paiements encaissés moins paiements remboursés
-                'collected_amount' => (string) (clone $base)
-                    ->where('status', 'paid')
-                    ->sum('amount'),
+                'collected_amount' => (string) (clone $base)->where('status', 'paid')
+                    ->where('method', '!=', 'demo')->sum('amount'),
+                'cash_collected_amount' => (string) (clone $base)->where('status', 'paid')
+                    ->where('method', 'cash')->sum('amount'),
+                'pending_cash' => (clone $base)->where('status', 'pending')
+                    ->where('method', 'cash')->count(),
+                'demo_amount' => (string) (clone $base)->where('method', 'demo')
+                    ->where('status', 'simulated')->sum('amount'),
             ],
         ];
     }
@@ -168,36 +176,21 @@ class PaymentService
         $subscriptions = collect();
 
         if (!empty($filters['member_id'])) {
-            $subscriptions = MemberSubscription::query()
+            $subscriptions = FinanceLedger::withTotals(MemberSubscription::query())
                 ->where('member_id', (int) $filters['member_id'])
-                ->whereIn('status', [
-                    'pending',
-                    'active',
-                    'expired',
-                ])
+                ->where('status', 'pending')
+                ->whereDate('ends_at', '>=', now(self::TZ)->toDateString())
                 ->with([
                     'plan' => fn ($q) =>
                         $q->withTrashed()
                           ->select('id', 'name'),
                 ])
-                ->withSum([
-                    'payments as paid_total' => fn ($q) =>
-                        $q->where('status', 'paid'),
-                ], 'amount')
                 ->orderByDesc('id')
                 ->limit(100)
                 ->get()
                 ->map(
                     function (MemberSubscription $s): array {
-                        $price = $this->cents(
-                            $s->price_at_purchase
-                        );
-
-                        $paid = $this->cents(
-                            $s->paid_total ?? 0
-                        );
-
-                        $remaining = max(0, $price - $paid);
+                        $balance = FinanceLedger::summary($s);
 
                         return [
                             'id' => (int) $s->id,
@@ -210,7 +203,7 @@ class PaymentService
                                 $s->price_at_purchase,
 
                             'remaining_amount' =>
-                                $this->money($remaining),
+                                $balance['remaining_amount'],
 
                             'plan' => $s->plan ? [
                                 'id' => (int) $s->plan->id,
@@ -221,7 +214,7 @@ class PaymentService
                 )
                 ->filter(
                     fn (array $s): bool =>
-                        $this->cents($s['remaining_amount']) > 0
+                        FinanceLedger::cents($s['remaining_amount']) > 0
                 )
                 ->values();
         }
@@ -238,6 +231,12 @@ class PaymentService
 
     public function create(User $admin, array $data): array
     {
+        if (($data['method'] ?? null) !== 'demo') {
+            throw ValidationException::withMessages([
+                'method' => 'Seul un règlement simulé peut être enregistré.',
+            ]);
+        }
+
         $paidAt = CarbonImmutable::createFromFormat(
             '!Y-m-d\TH:i',
             $data['paid_at'],
@@ -280,44 +279,19 @@ class PaymentService
                     ->first();
 
                 if (
-                    !$subscription ||
-                    !in_array(
-                        $subscription->status,
-                        ['pending', 'active', 'expired'],
-                        true
-                    )
+                    !$subscription || $subscription->status !== 'pending'
+                    || $subscription->ends_at->toDateString() < now(self::TZ)->toDateString()
                 ) {
                     throw ValidationException::withMessages([
-                        'subscription_id' =>
-                            'Abonnement invalide ou annulé pour ce membre.',
+                        'subscription_id' => 'Abonnement en attente et non expiré requis.',
                     ]);
                 }
 
-                // Calcul en centimes pour éviter les erreurs
-                $amount = $this->cents($data['amount']);
-
-                $price = $this->cents(
-                    $subscription->price_at_purchase
-                );
-
-                $alreadyPaid = $this->cents(
-                    Payment::query()
-                        ->where(
-                            'subscription_id',
-                            $subscription->id
-                        )
-                        ->where('status', 'paid')
-                        ->sum('amount')
-                );
-
-                // Refuser un montant supérieur au reste
-                if (
-                    $amount <= 0 ||
-                    $alreadyPaid + $amount > $price
-                ) {
+                $amount = FinanceLedger::cents($data['amount']);
+                $remaining = FinanceLedger::cents(FinanceLedger::summary($subscription)['remaining_amount']);
+                if ($amount <= 0 || $amount > $remaining) {
                     throw ValidationException::withMessages([
-                        'amount' =>
-                            'Montant supérieur au reste à payer.',
+                        'amount' => 'Montant supérieur au reste à simuler.',
                     ]);
                 }
 
@@ -337,6 +311,7 @@ class PaymentService
                         ->where('reference', $reference)
                         ->whereIn('status', [
                             'paid',
+                            'simulated',
                             'refunded',
                         ])
                         ->exists()
@@ -354,12 +329,12 @@ class PaymentService
                             'subscription_id',
                             $subscription->id
                         )
-                        ->where('status', 'paid')
+                        ->where('status', 'simulated')
                         ->where(
                             'amount',
-                            $this->money($amount)
+                            FinanceLedger::money($amount)
                         )
-                        ->where('method', $data['method'])
+                        ->where('method', 'demo')
                         ->where('paid_at', $utcDate)
                         ->exists()
                 ) {
@@ -382,10 +357,10 @@ class PaymentService
                     'recorded_by_user_id' =>
                         $admin->id,
 
-                    'amount' => $this->money($amount),
+                    'amount' => FinanceLedger::money($amount),
 
-                    'method' => $data['method'],
-                    'status' => 'paid',
+                    'method' => 'demo',
+                    'status' => 'simulated',
                     'paid_at' => $utcDate,
                     'reference' => $reference,
 
@@ -422,7 +397,7 @@ class PaymentService
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                MemberSubscription::query()
+                $subscription = MemberSubscription::query()
                     ->whereKey($payment->subscription_id)
                     ->lockForUpdate()
                     ->firstOrFail();
@@ -433,16 +408,22 @@ class PaymentService
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                if ($row->status !== 'paid') {
+                if ($row->method !== 'demo' || $row->status !== 'simulated') {
                     throw ValidationException::withMessages([
                         'status' =>
-                            'Seul un paiement payé peut être marqué remboursé.',
+                            'Seul un règlement simulé peut être remboursé.',
                     ]);
                 }
 
+                if ($subscription->status === 'active'
+                    && $subscription->ends_at->toDateString() >= now(self::TZ)->toDateString()) {
+                    throw ValidationException::withMessages([
+                        'status' => 'Annulez d’abord l’abonnement actif avant de déclarer un remboursement.',
+                    ]);
+                }
                 $row->status = 'refunded';
 
-                $audit = 'Remboursement déclaré le '
+                $audit = 'Remboursement simulé le '
                     . now(self::TZ)->format('Y-m-d H:i')
                     . ' par administrateur #'
                     . $admin->id
@@ -463,6 +444,62 @@ class PaymentService
         return $this->present(
             $this->loadRow($updated)
         );
+    }
+
+    public function checkout(User $member, MemberSubscription $membership): array
+    {
+        abort_unless($member->isMember() && $member->isActive(), 403);
+
+        $payment = DB::transaction(function () use ($member, $membership): Payment {
+            User::query()->whereKey($member->id)->where('status', 'active')->lockForUpdate()->firstOrFail();
+            $sub = MemberSubscription::query()->whereKey($membership->id)
+                ->where('member_id', $member->id)->lockForUpdate()->firstOrFail();
+
+            if ($sub->status !== 'pending' || $sub->ends_at->toDateString() < now(self::TZ)->toDateString()) {
+                throw ValidationException::withMessages(['membership' => 'Abonnement non éligible à la simulation.']);
+            }
+
+            $balance = FinanceLedger::summary($sub);
+            if ($balance['remaining_amount'] === '0.00') {
+                $existing = $sub->payments()->where('method', 'demo')->where('status', 'simulated')
+                    ->latest('id')->first();
+                if ($existing) {
+                    return $existing;
+                }
+
+                throw ValidationException::withMessages(['membership' => 'Cet abonnement est déjà réglé.']);
+            }
+
+            return $sub->payments()->create([
+                'member_id' => $member->id,
+                'amount' => $balance['remaining_amount'],
+                'method' => 'demo',
+                'status' => 'simulated',
+                'paid_at' => now('UTC'),
+                'reference' => 'DEMO-' . Str::upper(Str::random(16)),
+            ]);
+        }, 3);
+
+        return $this->present($this->loadRow($payment));
+    }
+
+    // ADMIN: Clear a stale/rejected Cash request without recording any money.
+    public function rejectCash(User $admin, Payment $payment): array
+    {
+        abort_unless($admin->isAdmin() && $payment->subscription_id !== null, 404);
+        $record = DB::transaction(function () use ($payment, $admin): Payment {
+            User::withTrashed()->whereKey($payment->member_id)->lockForUpdate()->firstOrFail();
+            MemberSubscription::query()->whereKey($payment->subscription_id)->lockForUpdate()->firstOrFail();
+            $row = Payment::query()->whereKey($payment->id)->lockForUpdate()->firstOrFail();
+            if ($row->method !== 'cash' || $row->status !== 'pending') {
+                throw ValidationException::withMessages(['status' => 'Seule une demande Cash en attente peut être refusée.']);
+            }
+            $row->status = 'cancelled';
+            $row->notes = trim(($row->notes ? $row->notes . "\n" : '') . 'Demande refusée par admin #' . $admin->id . '.');
+            $row->save();
+            return $row;
+        }, 3);
+        return $this->present($this->loadRow($record));
     }
 
     // ==========================================
@@ -522,46 +559,5 @@ class PaymentService
                 ] : null,
             ] : null,
         ];
-    }
-
-    // ==========================================
-    // CALCUL DES MONTANTS EN CENTIMES
-    // ==========================================
-
-    private function cents(string|int|float $value): int
-    {
-        $str = (string) $value;
-
-        if (
-            !preg_match(
-                '/^\d{1,15}(?:\.\d{1,2})?$/D',
-                $str
-            )
-        ) {
-            throw ValidationException::withMessages([
-                'amount' => 'Montant invalide.',
-            ]);
-        }
-
-        [$whole, $fraction] = array_pad(
-            explode('.', $str, 2),
-            2,
-            ''
-        );
-
-        return ((int) $whole * 100)
-            + (int) str_pad($fraction, 2, '0');
-    }
-
-    private function money(int $cents): string
-    {
-        return intdiv($cents, 100)
-            . '.'
-            . str_pad(
-                (string) ($cents % 100),
-                2,
-                '0',
-                STR_PAD_LEFT
-            );
     }
 }

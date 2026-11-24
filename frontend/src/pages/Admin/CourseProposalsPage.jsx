@@ -7,18 +7,14 @@ import { courseProposalsAdminApi } from "../../services/CourseProposalsAdminApi"
 
 const statuses = { pending: "En attente", approved: "Acceptée", rejected: "Refusée" };
 const badges = { pending: "bg-amber-50 text-amber-700", approved: "bg-emerald-50 text-emerald-700", rejected: "bg-rose-50 text-rose-700" };
-const validPrice = (value) => /^(?:0|[1-9]\d{0,5})(?:\.\d{1,2})?$/.test(value) && Number(value) <= 999999;
 
 function ProposalCard({ item, onReviewed }) {
-  const [price, setPrice] = useState("0"), [note, setNote] = useState("");
+  const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
   const [action, setAction] = useState(null), [confirmError, setConfirmError] = useState("");
 
   function ask(kind) {
     setError(""); setConfirmError("");
-    if (kind === "approve" && !validPrice(price.trim())) {
-      setError("Prix invalide : entre 0 et 999999 MAD, maximum deux décimales."); return;
-    }
     if (kind === "reject" && !note.trim()) { setError("Indiquez le motif du refus."); return; }
     setAction(kind);
   }
@@ -26,7 +22,7 @@ function ProposalCard({ item, onReviewed }) {
     if (!action || busy) return;
     setBusy(true); setConfirmError("");
     try {
-      if (action === "approve") await courseProposalsAdminApi.approve(item.id, Number(price), note.trim());
+      if (action === "approve") await courseProposalsAdminApi.approve(item.id, note.trim());
       else await courseProposalsAdminApi.reject(item.id, note.trim());
       setAction(null); onReviewed();
     } catch (e) { setConfirmError(apiError(e)); }
@@ -45,9 +41,7 @@ function ProposalCard({ item, onReviewed }) {
     {item.review_note && <p className="mt-2 rounded-lg bg-slate-50 p-2 text-xs text-slate-600">Retour : {item.review_note}</p>}
     {item.status === "pending" && <div className="mt-4 space-y-3 border-t border-slate-100 pt-3">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[110px_1fr]">
-        <label className="text-[11px] font-semibold text-slate-600">Prix (MAD)
-          <input type="text" inputMode="decimal" maxLength={10} value={price} onChange={(e) => { setPrice(e.target.value); setError(""); }} className="mt-1 h-9 w-full rounded-lg border border-slate-200 px-2 text-xs text-slate-800 focus:border-blue-500 focus:outline-none"/>
-        </label>
+        <p className="text-[11px] text-slate-600">Prix défini dans les tarifs d’abonnement.</p>
         <label className="text-[11px] font-semibold text-slate-600">Note / motif du refus
           <textarea rows={2} value={note} maxLength={1000} onChange={(e) => { setNote(e.target.value); setError(""); }} className="mt-1 w-full rounded-lg border border-slate-200 p-2 text-xs text-slate-800 focus:border-blue-500 focus:outline-none"/>
         </label>
@@ -61,7 +55,7 @@ function ProposalCard({ item, onReviewed }) {
     <ConfirmDialog open={Boolean(action)} title={action === "approve" ? "Accepter cette proposition ?" : "Refuser cette proposition ?"}
       description={action === "approve" ? "Le cours sera créé et publié. Vérifiez le prix avant de confirmer." : "La proposition sera refusée et le coach pourra consulter votre motif."}
       subject={item.name} subjectLabel="PROPOSITION SÉLECTIONNÉE"
-      warning={action === "approve" ? `Prix du nouveau cours : ${Number(price || 0).toFixed(2)} MAD` : `Motif : ${note.trim()}`}
+      warning={action === "approve" ? "Le prix se définit dans les tarifs d’abonnement." : `Motif : ${note.trim()}`}
       variant={action === "approve" ? "primary" : "danger"} confirmLabel={action === "approve" ? "Accepter et créer" : "Refuser"}
       loading={busy} error={confirmError} onCancel={() => { if (!busy) setAction(null); }} onConfirm={confirm}/>
   </article>;

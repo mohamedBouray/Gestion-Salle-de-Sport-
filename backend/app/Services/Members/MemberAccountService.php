@@ -5,6 +5,7 @@ namespace App\Services\Members;
 use App\Models\GymAttendance;
 use App\Models\MemberSubscription;
 use App\Models\User;
+use App\Services\FinanceLedger;
 use Illuminate\Database\Eloquent\Builder;
 
 class MemberAccountService
@@ -51,7 +52,7 @@ class MemberAccountService
         ];
 
         // Historique avec pagination
-        $memberships = $query
+        $memberships = FinanceLedger::withTotals($query)
             ->with($withPlan)
             ->orderByDesc('starts_at')
             ->orderByDesc('id')
@@ -64,7 +65,7 @@ class MemberAccountService
 
         // Abonnements valides aujourd'hui
         // Independants des filtres et de la pagination
-        $active = MemberSubscription::query()
+        $active = FinanceLedger::withTotals(MemberSubscription::query())
             ->where('member_id', $memberId)
             ->where('status', 'active')
             ->whereDate('starts_at', '<=', $today)
@@ -215,6 +216,8 @@ class MemberAccountService
             'price_at_purchase' =>
                 $row->price_at_purchase,
 
+            ...FinanceLedger::summary($row),
+
             'access_now' =>
                 $row->status === 'active'
                 && $start !== null
@@ -347,3 +350,5 @@ class MemberAccountService
         ];
     }
 }
+
+

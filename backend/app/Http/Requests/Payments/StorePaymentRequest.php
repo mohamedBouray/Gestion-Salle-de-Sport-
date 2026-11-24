@@ -38,7 +38,7 @@ class StorePaymentRequest extends FormRequest
 
             'method' => [
                 'required',
-                Rule::in(['cash', 'virement', 'other']),
+                Rule::in(['demo']),
             ],
 
             'paid_at' => [

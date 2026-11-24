@@ -56,7 +56,7 @@ class StoreCourseRequest extends FormRequest
                 ),
             ],
             'price' => [
-                'bail', 'required', 'numeric', 'min:0', 'max:99999999.99',
+                'bail', 'sometimes', 'required', 'numeric', 'min:0', 'max:99999999.99',
                 'decimal:0,2', 'regex:/\A[0-9]+(?:\.[0-9]{1,2})?\z/D',
             ],
             'status' => ['required', Rule::in(['pending', 'active', 'inactive'])],

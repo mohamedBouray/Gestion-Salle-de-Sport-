@@ -20,6 +20,7 @@ import ReservationsFilters from "../../components/admin/reservations/Reservation
 import ReservationsTable from "../../components/admin/reservations/ReservationsTable";
 import ReservationForm from "../../components/admin/reservations/ReservationForm";
 import ReservationDetails from "../../components/admin/reservations/ReservationDetails";
+import ConfirmDialog from "../../components/shared/ConfirmDialog";
 
 // ========================================
 // CONSTANTS
@@ -132,6 +133,9 @@ export default function ReservationsPage() {
   // Modals
   const [createOpen, setCreateOpen] = useState(false);
   const [selectedReservation, setSelectedReservation] = useState(null);
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [cancelError, setCancelError] = useState("");
 
   const [members, setMembers] = useState([]);
   const [availableSessions, setAvailableSessions] = useState([]);
@@ -406,6 +410,33 @@ export default function ReservationsPage() {
   }
 
   // =====================================
+  // ADMIN — ANNULATION SÉCURISÉE
+  // =====================================
+
+  function requestCancellation(reservation) {
+    if (cancelBusy) return;
+    setSelectedReservation(null);
+    setCancelError("");
+    setCancelTarget(reservation);
+  }
+
+  async function confirmCancellation() {
+    if (!cancelTarget || cancelBusy) return;
+    setCancelBusy(true);
+    setCancelError("");
+    try {
+      const response = await reservationsApi.admin.cancel(cancelTarget.id);
+      setCancelTarget(null);
+      setPage(1);
+      refresh(response?.message || "Réservation annulée.");
+    } catch (err) {
+      setCancelError(err?.response ? apiError(err) : err?.message || "Annulation impossible.");
+    } finally {
+      setCancelBusy(false);
+    }
+  }
+
+  // =====================================
   // RENDER
   // =====================================
 
@@ -533,8 +564,24 @@ export default function ReservationsPage() {
         <ReservationDetails
           reservation={selectedReservation}
           onClose={() => setSelectedReservation(null)}
+          onCancel={requestCancellation}
         />
       )}
+
+      <ConfirmDialog
+        open={Boolean(cancelTarget)}
+        title="Annuler cette réservation ?"
+        description="La place sera libérée, mais l'historique sera conservé."
+        subject={`${cancelTarget?.member?.name || "Membre"} · ${cancelTarget?.session?.course?.name || "Cours sportif"}`}
+        subjectLabel="RÉSERVATION SÉLECTIONNÉE"
+        warning="L'annulation est refusée après le début de la séance ou si un paiement est associé. Aucun remboursement automatique."
+        variant="danger"
+        confirmLabel="Annuler la réservation"
+        loading={cancelBusy}
+        error={cancelError}
+        onCancel={() => { if (!cancelBusy) { setCancelTarget(null); setCancelError(""); } }}
+        onConfirm={confirmCancellation}
+      />
     </main>
   );
 }

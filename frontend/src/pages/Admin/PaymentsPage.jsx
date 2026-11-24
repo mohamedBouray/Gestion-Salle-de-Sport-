@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 
 import {
@@ -15,15 +14,16 @@ import {
 
 import PaymentCard from "../../components/admin/payments/PaymentCard";
 import PaymentForm from "../../components/admin/payments/PaymentForm";
+import ConfirmDialog from "../../components/shared/ConfirmDialog";
 
 import { paymentsApi } from "../../services/PaymentsApi";
 import { apiError } from "../../services/api";
 
 const counters = [
   ["total", "Total paiements", CreditCard],
-  ["paid", "Payés", Wallet],
+  ["simulated", "Simulés", Wallet],
   ["refunded", "Remboursés", RotateCcw],
-  ["collected_amount", "Montant encaissé", Banknote],
+  ["demo_amount", "Montant simulé", Banknote],
 ];
 
 const money = (value) =>
@@ -58,6 +58,8 @@ export default function PaymentsPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [formOpen, setFormOpen] = useState(false);
+  const [confirmation, setConfirmation] = useState(null);
+  const [confirmationError, setConfirmationError] = useState("");
 
   // Recherche avec délai
   useEffect(() => {
@@ -142,36 +144,18 @@ export default function PaymentsPage() {
     );
   }
 
-  // Déclarer un remboursement déjà effectué
-  async function markRefunded(payment) {
-    if (busyId !== null) return;
+  function askAction(payment, type) { setConfirmation({ payment, type }); setConfirmationError(""); }
 
-    const confirmation = window.confirm(
-      `Confirmer que le remboursement de ${money(
-        payment.amount
-      )} à ${payment.member?.name || "ce membre"} ` +
-      "a déjà été effectué ?\n\n" +
-      "Cette opération modifie le suivi interne, " +
-      "mais ne transfère aucun argent."
-    );
-
-    if (!confirmation) return;
-
-    setBusyId(payment.id);
-    setError("");
-    setNotice("");
-
+  async function runConfirmedAction() {
+    if (!confirmation || busyId !== null) return;
+    const { payment, type } = confirmation;
+    setBusyId(payment.id); setError(""); setConfirmationError("");
     try {
-      const result = await paymentsApi.refund(payment.id);
-
-      refresh(
-        result.message || "Remboursement enregistré."
-      );
-    } catch (err) {
-      setError(apiError(err));
-    } finally {
-      setBusyId(null);
-    }
+      const result = type === "reject" ? await paymentsApi.rejectCash(payment.id) : await paymentsApi.refund(payment.id);
+      setConfirmation(null);
+      refresh(result.message || (type === "reject" ? "Demande clôturée." : "Remboursement enregistré."));
+    } catch (err) { setConfirmationError(apiError(err)); }
+    finally { setBusyId(null); }
   }
 
   const currentPage =
@@ -250,6 +234,20 @@ export default function PaymentsPage() {
           ))}
         </div>
 
+        <div className="rounded-xl border border-blue-100 bg-blue-50 p-3 text-[11px] leading-5 text-blue-900">
+          <strong>Paiements simulés</strong> · Les données d’encaissement antérieures sont conservées dans l’historique.
+        </div>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {[
+            ["cash_collected_amount", "Espèces historiques", true],
+            ["pending_cash", "Anciennes demandes ouvertes", false],
+            ["demo_amount", "Total simulé", true],
+          ].map(([key, label, currency]) => <div key={key} className="rounded-xl border border-slate-200 bg-white p-3">
+            <p className="text-[11px] text-slate-500">{label}</p>
+            <p className="mt-1 text-base font-extrabold text-slate-900">{stats[key] == null ? "—" : currency ? money(stats[key]) : stats[key]}</p>
+            {stats[key] == null && <p className="mt-1 text-[10px] text-slate-400">Donnée indisponible</p>}
+          </div>)}
+        </div>
         {/* Recherche et filtres */}
         <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-3">
           <div className="flex flex-wrap gap-2">
@@ -281,6 +279,7 @@ export default function PaymentsPage() {
               <option value="paid">Payés</option>
               <option value="pending">En attente</option>
               <option value="refunded">Remboursés</option>
+              <option value="simulated">Simulés (DEMO)</option>
             </select>
 
             <select
@@ -296,6 +295,7 @@ export default function PaymentsPage() {
               <option value="cash">Espèces</option>
               <option value="virement">Virement</option>
               <option value="other">Autre</option>
+              <option value="demo">Simulation DEMO</option>
             </select>
           </div>
 
@@ -376,7 +376,8 @@ export default function PaymentsPage() {
                 key={payment.id}
                 payment={payment}
                 busy={busyId !== null}
-                onRefund={markRefunded}
+                onRefund={(payment) => askAction(payment, "refund")}
+                onRejectCash={(payment) => askAction(payment, "reject")}
               />
             ))}
           </div>
@@ -422,6 +423,12 @@ export default function PaymentsPage() {
         )}
       </div>
 
+      <ConfirmDialog open={Boolean(confirmation)} title={confirmation?.type === "reject" ? "Clôturer cette ancienne demande ?" : "Simuler un remboursement ?"}
+        description={confirmation?.type === "reject" ? "Cette demande sera clôturée sans encaissement." : "Le montant simulé sera retiré du total réglé."}
+        subject={confirmation ? `${confirmation.payment.member?.name || "Membre"} · ${money(confirmation.payment.amount)}` : ""}
+        variant={confirmation?.type === "reject" ? "success" : "danger"}
+        confirmLabel={confirmation?.type === "reject" ? "Clôturer" : "Simuler le remboursement"}
+        loading={busyId !== null} error={confirmationError} onCancel={() => { if (busyId === null) setConfirmation(null); }} onConfirm={runConfirmedAction}/>
       {/* Formulaire */}
       {formOpen && (
         <PaymentForm

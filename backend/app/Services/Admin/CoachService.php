@@ -156,6 +156,9 @@ class CoachService
                 foreach (['name', 'phone', 'status'] as $field) {
                     if (array_key_exists($field, $data)) $current->{$field} = $data[$field];
                 }
+                if ($current->isDirty('status') && $current->status === 'inactive') {
+                    $this->assertNoUpcomingSessions($current);
+                }
                 $current->save();
 
                 if ($current->status === 'inactive') $current->sessions()->delete();
@@ -188,6 +191,8 @@ class CoachService
     {
         $this->ensureCoach($coach);
         DB::transaction(function () use ($coach) {
+            $coach = User::query()->whereKey($coach->id)->lockForUpdate()->firstOrFail();
+            $this->assertNoUpcomingSessions($coach);
             AccountInvitation::where('user_id', $coach->id)
                 ->whereNull('accepted_at')->whereNull('revoked_at')
                 ->update(['revoked_at' => now()]);
@@ -200,6 +205,15 @@ class CoachService
     {
         $this->ensureCoach($coach);
         return $this->invitations->send($coach, $admin);
+    }
+
+    private function assertNoUpcomingSessions(User $coach): void
+    {
+        if ($coach->coachedSessions()->where('status', 'scheduled')->where('end_at', '>', now('UTC'))->exists()) {
+            throw ValidationException::withMessages([
+                'status' => 'Réaffectez ou annulez les séances à venir de ce coach avant de continuer.',
+            ]);
+        }
     }
 
     private function ensureCoach(User $coach): void

@@ -25,6 +25,12 @@ export const paymentsApi = {
     ).then(unwrap);
   },
 
+  async rejectCash(id) {
+    if (!Number.isSafeInteger(Number(id)) || Number(id) < 1) throw new Error("Paiement invalide.");
+    await getCsrfCookie();
+    return api.patch(`/api/admin/payments/${Number(id)}/reject-cash`, {}).then(unwrap);
+  },
+
   async refund(id) {
     await getCsrfCookie();
 

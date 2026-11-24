@@ -25,7 +25,12 @@ class MemberCourseService
             ->where('status', 'active')
 
             // Coach associe au cours
-            ->with('coach:id,name')
+            ->with([
+                'coach:id,name',
+                'subscriptionPlans' => fn ($plans) => $plans->where('status', 'active')
+                    ->where('type', 'course')->orderBy('price')->orderBy('id')
+                    ->select('id', 'course_id', 'name', 'price', 'duration_value', 'duration_unit'),
+            ])
 
             // Nombre de seances futures programmees
             ->withCount([
@@ -75,6 +80,7 @@ class MemberCourseService
                     'description' => $course->description,
 
                     'price' => $course->price,
+                    'subscription_plans' => $course->subscriptionPlans,
 
                     'status' => $course->status,
 

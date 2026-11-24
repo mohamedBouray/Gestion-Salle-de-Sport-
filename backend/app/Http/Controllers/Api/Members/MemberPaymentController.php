@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api\Members;
 
 use App\Http\Controllers\Controller;
 use App\Services\Members\MemberPaymentService;
+use App\Services\Admin\PaymentService;
+use App\Models\MemberSubscription;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -30,6 +32,8 @@ class MemberPaymentController extends Controller
                     'pending',
                     'paid',
                     'refunded',
+                    'simulated',
+                    'cancelled',
                 ]),
             ],
 
@@ -39,6 +43,7 @@ class MemberPaymentController extends Controller
                     'cash',
                     'virement',
                     'other',
+                    'demo',
                 ]),
             ],
 
@@ -73,5 +78,17 @@ class MemberPaymentController extends Controller
                 $filters
             )
         );
+    }
+
+    public function checkout(Request $request, MemberSubscription $membership, PaymentService $finance): JsonResponse
+    {
+        $request->validate(['method' => ['required', Rule::in(['demo'])]]);
+        // Ownership is enforced again under lock by the service.
+        abort_unless((int) $membership->member_id === (int) $request->user()->id, 404);
+        $payment = $finance->checkout($request->user(), $membership);
+        return response()->json([
+            'message' => 'Règlement simulé enregistré.',
+            'payment' => $payment,
+        ], 201);
     }
 }

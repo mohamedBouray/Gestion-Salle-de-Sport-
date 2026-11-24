@@ -1,16 +1,18 @@
-
 import api from "./api";
+import { getCsrfCookie } from "./api";
 
 const unwrap = (response) => response.data;
 
 export const memberPaymentsApi = {
-  list: (params = {}, signal) =>
-    api
-      .get("/api/member/payments", {
-        params,
-        signal,
-      })
-      .then(unwrap),
+  list: (params = {}, signal) => api.get("/api/member/payments", { params, signal }).then(unwrap),
+
+  // Le serveur détermine le solde, vérifie l'identité et crée le paiement.
+  async checkout(subscriptionId) {
+    if (!Number.isSafeInteger(Number(subscriptionId)) || Number(subscriptionId) < 1)
+      throw new Error("Abonnement invalide.");
+    await getCsrfCookie();
+    return api.post(`/api/member/memberships/${Number(subscriptionId)}/checkout`, { method: "demo" }).then(unwrap);
+  },
 };
 
 export function readPaymentsPage(response) {

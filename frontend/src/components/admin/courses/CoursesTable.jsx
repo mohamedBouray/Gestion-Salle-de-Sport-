@@ -10,8 +10,7 @@ const statuses = {
     pending: { label: "En attente", badge: "bg-amber-50 text-amber-700 ring-amber-600/20", dot: "bg-amber-500" },
 };
 
-const money = (value) => value === null || value === undefined || value === "" || !Number.isFinite(Number(value))
-    ? "—" : Number(value).toLocaleString("fr-MA", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 
 const coachName = (course) =>
     course.coach?.name || (typeof course.coach === "string" ? course.coach : "") || course.coach_name || "Non assigné";
@@ -98,8 +97,7 @@ function CourseCard({ course, busy, disabled, onView, onEdit, onToggleStatus, on
                 </div>
 
                 <p className="mt-3 text-xl font-extrabold tracking-tight text-blue-600">
-                    {money(course.price)}
-                    <span className="ml-1 text-xs font-semibold text-slate-400">MAD / séance</span>
+                    Par abonnement
                 </p>
 
                 <div className="mt-3 flex items-center gap-1.5 border-t border-slate-100 pt-3">

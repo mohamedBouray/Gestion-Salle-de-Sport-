@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { LoaderCircle, X } from "lucide-react";
 import { apiError } from "../../../services/api";
@@ -57,13 +56,18 @@ export default function TariffForm({
 
     if (
       form.price.trim() === "" ||
+      !/^\d+(?:\.\d{1,2})?$/.test(form.price.trim()) ||
       !Number.isFinite(price) ||
-      price < 0
+      price < 0 || price > 99999999.99
     ) {
       setError("Indiquez un prix valide.");
       return;
     }
 
+    if (form.name.trim().length < 2 || form.name.trim().length > 160 || !/\p{L}/u.test(form.name)) {
+      setError("Nom du tarif invalide : 2 à 160 caractères et au moins une lettre."); return;
+    }
+    if (form.description.trim().length > 2000) { setError("Description : maximum 2000 caractères."); return; }
     if (form.type === "course" && !form.course_id) {
       setError("Sélectionnez un cours sportif.");
       return;

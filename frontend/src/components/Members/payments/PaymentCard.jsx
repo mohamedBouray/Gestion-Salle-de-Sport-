@@ -1,4 +1,3 @@
-
 import {
   Banknote,
   CalendarDays,
@@ -23,12 +22,17 @@ const STATUS = {
     label: "Remboursé",
     className: "bg-rose-50 text-rose-700",
   },
+  simulated: {
+    label: "Simulation DEMO",
+    className: "bg-violet-50 text-violet-700",
+  },
 };
 
 const METHODS = {
   cash: "Espèces",
   virement: "Virement",
   other: "Autre",
+  demo: "Carte simulée — DEMO",
 };
 
 const TYPES = {
@@ -82,6 +86,7 @@ export default function PaymentCard({ payment }) {
   };
 
   const isPending = payment.status === "pending";
+  const isDemo = payment.method === "demo" || payment.status === "simulated";
 
   return (
     <article className="flex h-full min-w-0 flex-col rounded-xl border border-slate-200 bg-white p-4 transition hover:border-blue-200 hover:shadow-sm">
@@ -110,6 +115,7 @@ export default function PaymentCard({ payment }) {
         </span>
       </div>
 
+      {isDemo && <p className="mt-3 rounded-lg bg-violet-50 p-2.5 text-[11px] font-semibold text-violet-800">Simulation pédagogique : aucune transaction bancaire ni recette réelle.</p>}
       {/* Montant */}
       <div className="mt-4 rounded-lg bg-slate-50 p-3">
         <p className="text-[11px] text-slate-500">

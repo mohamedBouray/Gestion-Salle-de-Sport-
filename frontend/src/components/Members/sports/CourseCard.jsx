@@ -20,6 +20,12 @@ export default function CourseCard({ course }) {
             <div className="mt-3 space-y-2 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
                 <p className="flex items-center gap-2"><UserRound size={14} className="text-blue-500" /><span className="truncate">{course.coach?.name || "Coach à confirmer"}</span></p>
                 <p className="flex items-center gap-2"><CalendarDays size={14} className="text-blue-500" />{hasSessions ? `${count} séance(s) à venir` : "Aucune séance future programmée"}</p>
+                {course.subscription_plans?.map((plan) => (
+                    <p key={plan.id} className="text-xs text-slate-600">
+                        {plan.name} · {Number(plan.price).toLocaleString("fr-MA")} MAD / {plan.duration_value} {plan.duration_unit === "day" ? "j" : plan.duration_unit === "month" ? "mois" : "an(s)"}
+                    </p>
+                ))}
+                <p className="text-xs text-slate-600">Séances incluses si couvertes par votre abonnement.</p>
             </div>
             {hasSessions ? (
                 <Link to={`/member/schedule?course=${course.id}`} className="mt-auto flex h-9 items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 text-xs font-bold text-white transition hover:bg-blue-700">

@@ -1,23 +1,23 @@
-
 import {
   Banknote,
   CalendarDays,
   CreditCard,
   FileText,
   RotateCcw,
-  UserRound,
 } from "lucide-react";
 
 const statuses = {
   pending: ["En attente", "bg-amber-50 text-amber-700"],
   paid: ["Payé", "bg-emerald-50 text-emerald-700"],
   refunded: ["Remboursé", "bg-rose-50 text-rose-700"],
+  simulated: ["Simulation DEMO", "bg-violet-50 text-violet-700"],
 };
 
 const methods = {
   cash: "Espèces",
   virement: "Virement",
   other: "Autre",
+  demo: "Carte simulée — DEMO",
 };
 
 const money = (value) =>
@@ -46,6 +46,7 @@ export default function PaymentCard({
   payment,
   busy = false,
   onRefund,
+  onRejectCash,
 }) {
   const [statusLabel, statusClass] =
     statuses[payment.status] || [
@@ -140,7 +141,13 @@ export default function PaymentCard({
       <div className="mt-auto flex items-center justify-between gap-2 border-t border-slate-100 pt-3 text-[11px] text-slate-500">
         <span>Paiement #{payment.id}</span>
 
-        {payment.status === "paid" && (
+        {payment.method === "cash" && payment.status === "pending" && onRejectCash && (
+          <button type="button" disabled={busy} onClick={() => onRejectCash(payment)}
+            className="inline-flex h-8 items-center gap-1 rounded-lg bg-emerald-600 px-3 font-bold text-white hover:bg-emerald-700 disabled:opacity-50">
+            <Banknote size={13}/> Clôturer la demande
+          </button>
+        )}
+        {payment.status === "simulated" && payment.method === "demo" && (
           <button
             type="button"
             disabled={busy}
@@ -148,7 +155,7 @@ export default function PaymentCard({
             className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-rose-200 px-3 font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-50"
           >
             <RotateCcw size={13} />
-            Marquer remboursé
+            Simuler le remboursement
           </button>
         )}
       </div>

@@ -1,13 +1,3 @@
-/**
- * BOURAY GYM
- * Reservations API
- *
- * Admin: consultation et réservation à l'accueil
- * Member: réservation personnelle
- *
- * Laravel Sanctum + Axios
- */
-
 import api, { getCsrfCookie } from "./api";
 
 // ========================================
@@ -60,6 +50,14 @@ const adminReservations = {
         { params }
       )
       .then(responseData);
+  },
+
+  // PATCH /api/admin/reservations/:id/cancel
+  async cancel(reservationId) {
+    const id = validId(reservationId, "Réservation");
+    await getCsrfCookie();
+    const response = await api.patch(`/api/admin/reservations/${id}/cancel`);
+    return responseData(response);
   },
 
   // POST /api/admin/course-sessions/:id/reservations

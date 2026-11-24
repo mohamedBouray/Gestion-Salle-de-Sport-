@@ -22,6 +22,14 @@ class UpdateCourseSessionRequest extends FormRequest
     // REGLES DE VALIDATION
     // =====================================
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->exists('location') && is_string($this->input('location'))) {
+            $location = preg_replace('/\s+/u', ' ', trim($this->input('location')));
+            $this->merge(['location' => $location === '' ? null : $location]);
+        }
+    }
+
     public function rules(): array
     {
         $session = $this->route('session');
@@ -160,10 +168,12 @@ class UpdateCourseSessionRequest extends FormRequest
             $endDate = Carbon::parse($end);
 
             if ($endDate->lessThanOrEqualTo($startDate)) {
-                $validator->errors()->add(
-                    'end_at',
-                    "La date de fin doit être après la date de début."
-                );
+                $validator->errors()->add('end_at', 'La date de fin doit être après la date de début.');
+                return;
+            }
+            $timezone = config('gym.timezone', 'Africa/Casablanca');
+            if ($startDate->copy()->setTimezone($timezone)->toDateString() !== $endDate->copy()->setTimezone($timezone)->toDateString()) {
+                $validator->errors()->add('end_at', 'La séance doit commencer et finir le même jour.');
             }
         });
     }

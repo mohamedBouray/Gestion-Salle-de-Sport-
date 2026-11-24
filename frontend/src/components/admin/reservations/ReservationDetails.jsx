@@ -49,7 +49,7 @@ function Row({ label, children }) {
     );
 }
 
-export default function ReservationDetails({ reservation, onClose }) {
+export default function ReservationDetails({ reservation, onClose, onCancel }) {
     useEffect(() => {
         function onKeyDown(event) {
             if (event.key === "Escape") onClose();
@@ -85,6 +85,9 @@ export default function ReservationDetails({ reservation, onClose }) {
 
     const startAt = session.start_at || reservation.start_at;
     const endAt = session.end_at || reservation.end_at;
+    const starts = startAt ? new Date(startAt) : null;
+    const canCancel = ["pending", "confirmed"].includes(reservation.status)
+        && starts && !Number.isNaN(starts.getTime()) && starts.getTime() > Date.now();
 
     return (
         <div
@@ -171,12 +174,18 @@ export default function ReservationDetails({ reservation, onClose }) {
                     </Group>
 
                     <p className="text-xs leading-5 text-slate-400">
-                        Cette fenêtre est en lecture seule. Les informations proviennent de
-                        la réservation reçue par la page.
+                        L'annulation conserve l'historique et ne déclenche aucun remboursement automatique.
+                        Le serveur vérifie le statut, la date et les éventuels paiements liés.
                     </p>
                 </div>
 
-                <footer className="flex shrink-0 justify-end border-t border-slate-200 px-5 py-3">
+                <footer className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-slate-200 px-5 py-3">
+                    {canCancel && onCancel && (
+                        <button type="button" onClick={() => onCancel(reservation)}
+                            className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-xs font-semibold text-red-700 hover:bg-red-100">
+                            Annuler la réservation
+                        </button>
+                    )}
                     <button
                         type="button"
                         onClick={onClose}

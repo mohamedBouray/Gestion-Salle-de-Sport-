@@ -10,7 +10,7 @@ import {
 
 // Indicateurs clés : 8 chiffres seulement (le reste est visible dans les graphiques et les pages dédiées)
 const stats = [
-    { key: "revenue_paid", label: "Encaissements non remboursés", icon: BadgeDollarSign, to: "/admin/payments", unit: "money" },
+    { key: "simulated_total", label: "Montant simulé", icon: BadgeDollarSign, to: "/admin/payments", unit: "money" },
     { key: "members_active", label: "Membres actifs", icon: ShieldCheck, to: "/admin/members" },
     { key: "memberships_active", label: "Abonnements actifs", icon: CreditCard, to: "/admin/memberships" },
     { key: "reservations_confirmed", label: "Réservations confirmées", icon: TicketCheck, to: "/admin/reservations" },
@@ -40,7 +40,7 @@ export default function AdminDashboard() {
                     {/* Finances : graphique principal + répartition des paiements */}
                     <div className="grid gap-4 xl:grid-cols-3">
                         <div className="min-w-0 xl:col-span-2">
-                            <TrendChart title="Encaissements" subtitle="Paiements marqués payés, hors remboursements" data={charts.revenue} type="area" money color="#2563eb" />
+                            <TrendChart title="Règlements simulés" subtitle="Hors remboursements simulés" data={charts.simulated_payments} type="area" money color="#2563eb" />
                         </div>
                         <div className="min-w-0">
                             <DistributionChart title="Statuts des paiements" subtitle="Répartition sur la période" data={charts.payment_status} />

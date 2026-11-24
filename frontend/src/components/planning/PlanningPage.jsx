@@ -18,6 +18,7 @@ import PlanningFilters from "./PlanningFilters";
 import PlanningCalendar from "./PlanningCalendar";
 import SessionModal from "./SessionModal";
 import SessionDetails from "./SessionDetails";
+import ConfirmDialog from "../shared/ConfirmDialog";
 
 // ========================================
 // HELPERS
@@ -111,6 +112,8 @@ export default function PlanningPage({ role = "admin" }) {
   // Modals: undefined = closed, null = new session, object = edit session
   const [editingSession, setEditingSession] = useState(undefined);
   const [detailsId, setDetailsId] = useState(null);
+  const [cancelTarget, setCancelTarget] = useState(null);
+  const [cancelError, setCancelError] = useState("");
 
   // ========================================
   // CALENDAR DATES
@@ -404,31 +407,27 @@ export default function PlanningPage({ role = "admin" }) {
     }
   }
 
-  async function cancelSession(session) {
-    if (saving || session.status === "cancelled") {
-      return;
-    }
+  function cancelSession(session) {
+    if (saving || session.status !== "scheduled") return;
+    setCancelTarget(session);
+    setCancelError("");
+  }
 
-    const confirmed = window.confirm(
-      `Voulez-vous annuler la séance "${session.course?.name || session.course_name || "Cours"}" ?`
-    );
-
-    if (!confirmed) return;
-
+  async function confirmCancelSession() {
+    if (!cancelTarget || saving) return;
     setSaving(true);
+    setCancelError("");
     setError("");
     setNotice("");
-
     try {
-      await planningApi.admin.update(session.id, {
-        status: "cancelled",
-      });
-
+      await planningApi.admin.update(cancelTarget.id, { status: "cancelled" });
+      setCancelTarget(null);
       setDetailsId(null);
       setNotice("Séance annulée avec succès.");
       refresh();
     } catch (err) {
-      setError(apiError(err));
+      // Garder le dialogue ouvert pour afficher la raison métier (422).
+      setCancelError(apiError(err));
     } finally {
       setSaving(false);
     }
@@ -602,6 +601,20 @@ export default function PlanningPage({ role = "admin" }) {
           busy={saving}
         />
       )}
+      <ConfirmDialog
+        open={Boolean(cancelTarget)}
+        title="Annuler cette séance ?"
+        description="La séance sera annulée mais restera dans l'historique du planning."
+        subject={cancelTarget?.course?.name || cancelTarget?.course_name || "Cours sportif"}
+        subjectLabel="SÉANCE SÉLECTIONNÉE"
+        warning="L'annulation est refusée si la séance a commencé ou comporte des réservations actives."
+        confirmLabel="Annuler la séance"
+        variant="danger"
+        loading={saving}
+        error={cancelError}
+        onCancel={() => { if (!saving) { setCancelTarget(null); setCancelError(""); } }}
+        onConfirm={confirmCancelSession}
+      />
     </main>
   );
 }

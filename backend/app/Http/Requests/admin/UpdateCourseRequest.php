@@ -63,7 +63,7 @@ class UpdateCourseRequest extends FormRequest
                 'bail', 'sometimes', 'required', 'numeric', 'min:0', 'max:99999999.99',
                 'decimal:0,2', 'regex:/\A[0-9]+(?:\.[0-9]{1,2})?\z/D',
             ],
-            'status' => ['sometimes', Rule::in(['pending', 'active', 'inactive'])],
+            'status' => ['sometimes', 'required', Rule::in(['pending', 'active', 'inactive'])],
             'image' => ['sometimes', 'nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ];
     }

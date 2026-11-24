@@ -95,12 +95,13 @@ function getCollection(response, key) {
 // FORM FIELD
 // =====================================
 
-function Field({ label, required = false, children, className = "" }) {
+function Field({ label, required = false, error = "", children, className = "" }) {
   return (
     <label className={`block min-w-0 text-xs font-semibold text-slate-600 ${className}`}>
       {label}
       {required && <span className="ml-0.5 text-red-500">*</span>}
       {children}
+      {error && <span role="alert" className="mt-1 block text-xs font-medium text-red-600">{error}</span>}
     </label>
   );
 }
@@ -123,6 +124,7 @@ export default function SessionModal({
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const [availabilities, setAvailabilities] = useState([]);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
@@ -132,7 +134,7 @@ export default function SessionModal({
 
   function change(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
-
+    setFieldErrors((current) => ({ ...current, [key]: "" }));
     if (error) setError("");
   }
 
@@ -212,6 +214,7 @@ export default function SessionModal({
     }));
 
     setError("");
+    setFieldErrors((current) => ({ ...current, course_id: "", coach_id: "" }));
   }
 
   // Keep existing values selectable even when the related
@@ -236,68 +239,53 @@ export default function SessionModal({
 
   async function handleSubmit(event) {
     event.preventDefault();
-
     if (busy) return;
-
     setError("");
+    setFieldErrors({});
 
+    // Laravel reste la validation finale. Afficher les erreurs sous chaque champ.
+    const problems = {};
+    const statusOnly = isEditing && form.status !== session.status;
+    const start = new Date(form.start_at), end = new Date(form.end_at);
+    if (!statusOnly) {
+      if (!form.course_id) problems.course_id = "Sélectionnez un cours.";
+      if (!form.coach_id) problems.coach_id = "Sélectionnez un coach.";
+      if (!form.start_at || Number.isNaN(start.getTime())) problems.start_at = "Date de début invalide.";
+      if (!form.end_at || Number.isNaN(end.getTime())) problems.end_at = "Date de fin invalide.";
+      if (!problems.start_at && !problems.end_at && end <= start) problems.end_at = "La fin doit être après le début.";
+      if (!isEditing && !problems.start_at && start <= new Date()) problems.start_at = "La séance doit commencer dans le futur.";
+      if (!/^[1-9]\d*$/.test(String(form.capacity)) || Number(form.capacity) > 1000) problems.capacity = "Capacité entière entre 1 et 1000.";
+      if (form.location.trim().length > 160) problems.location = "160 caractères maximum.";
+    }
+    if (Object.keys(problems).length) { setFieldErrors(problems); return; }
+
+    // Le serveur exige un changement de statut SÉPARÉ des autres modifications.
+    // Ne pas modifier les autres champs silencieusement.
+    if (statusOnly) {
+      const original = initialForm(session);
+      const keys = ["course_id", "coach_id", "start_at", "end_at", "capacity", "location"];
+      if (keys.some((key) => String(form[key]).trim() !== String(original[key]).trim())) {
+        setError("Enregistrez d'abord les modifications de la séance, puis changez son statut séparément.");
+        return;
+      }
+    }
+
+    setSubmitting(true);
     try {
-      if (!form.course_id || !form.coach_id) {
-        throw new Error("Veuillez sélectionner un cours et un coach.");
-      }
-
-      if (!form.start_at || !form.end_at) {
-        throw new Error("Veuillez renseigner les dates et horaires.");
-      }
-
-      const startDate = new Date(form.start_at);
-      const endDate = new Date(form.end_at);
-
-      if (
-        Number.isNaN(startDate.getTime()) ||
-        Number.isNaN(endDate.getTime())
-      ) {
-        throw new Error("Date ou heure invalide.");
-      }
-
-      if (endDate <= startDate) {
-        throw new Error("L'heure de fin doit être après l'heure de début.");
-      }
-
-      if (!isEditing && startDate <= new Date()) {
-        throw new Error("La nouvelle séance doit commencer dans le futur.");
-      }
-
-      const capacity = Number(form.capacity);
-
-      if (!Number.isInteger(capacity) || capacity < 1 || capacity > 1000) {
-        throw new Error("La capacité doit être comprise entre 1 et 1000.");
-      }
-
-      const payload = {
-        course_id: Number(form.course_id),
-        coach_id: Number(form.coach_id),
-        start_at: startDate.toISOString(),
-        end_at: endDate.toISOString(),
-        capacity,
-        location: form.location.trim() || null,
+      const payload = statusOnly ? { status: form.status } : {
+        course_id: Number(form.course_id), coach_id: Number(form.coach_id),
+        start_at: start.toISOString(), end_at: end.toISOString(),
+        capacity: Number(form.capacity), location: form.location.trim() || null,
         status: form.status,
       };
-
-      setSubmitting(true);
-
       await onSave(payload);
-
-      // PlanningPage closes this modal after a successful API response.
     } catch (err) {
-      setError(
-        err?.response
-          ? apiError(err)
-          : err?.message || "Impossible d'enregistrer la séance."
-      );
-    } finally {
-      setSubmitting(false);
-    }
+      const serverErrors = err?.response?.data?.errors;
+      if (serverErrors && typeof serverErrors === "object") {
+        setFieldErrors(Object.fromEntries(Object.entries(serverErrors).map(([k, v]) => [k, Array.isArray(v) ? v[0] : String(v)])));
+      }
+      setError(err?.response ? apiError(err) : err?.message || "Impossible d'enregistrer la séance.");
+    } finally { setSubmitting(false); }
   }
 
   // =====================================
@@ -361,7 +349,7 @@ export default function SessionModal({
             )}
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Cours sportif" required>
+              <Field label="Cours sportif" required error={fieldErrors.course_id}>
                 <select
                   required
                   value={form.course_id}
@@ -384,7 +372,7 @@ export default function SessionModal({
                 </select>
               </Field>
 
-              <Field label="Coach responsable" required>
+              <Field label="Coach responsable" required error={fieldErrors.coach_id}>
                 <select
                   required
                   value={form.coach_id}
@@ -445,7 +433,7 @@ export default function SessionModal({
             )}
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <Field label="Début de séance" required>
+              <Field label="Début de séance" required error={fieldErrors.start_at}>
                 <input
                   type="datetime-local"
                   required
@@ -455,7 +443,7 @@ export default function SessionModal({
                 />
               </Field>
 
-              <Field label="Fin de séance" required>
+              <Field label="Fin de séance" required error={fieldErrors.end_at}>
                 <input
                   type="datetime-local"
                   required
@@ -466,7 +454,7 @@ export default function SessionModal({
                 />
               </Field>
 
-              <Field label="Salle / Lieu">
+              <Field label="Salle / Lieu" error={fieldErrors.location}>
                 <input
                   type="text"
                   maxLength={160}
@@ -477,7 +465,7 @@ export default function SessionModal({
                 />
               </Field>
 
-              <Field label="Capacité maximale" required>
+              <Field label="Capacité maximale" required error={fieldErrors.capacity}>
                 <input
                   type="number"
                   required
@@ -489,7 +477,7 @@ export default function SessionModal({
                 />
               </Field>
 
-              <Field label="Statut de la séance" className="sm:col-span-2">
+              <Field label="Statut de la séance" error={fieldErrors.status} className="sm:col-span-2">
                 <select
                   value={form.status}
                   onChange={(event) => change("status", event.target.value)}

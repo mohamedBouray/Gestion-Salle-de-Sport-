@@ -1,4 +1,3 @@
-
 import {
   CalendarDays,
   Check,
@@ -53,8 +52,9 @@ export default function MembershipCard({
 
   const raw = item.status;
 
-  const canActivate =
-    raw === "pending" && actual !== "expired";
+  // Ne jamais autoriser l'activation sur une simple estimation côté navigateur.
+  // Le backend doit fournir payment_eligible=true après vérification du solde.
+  const canActivate = raw === "pending" && actual !== "expired" && item.payment_eligible === true;
 
   const canCancel =
     (raw === "pending" || raw === "active") &&
@@ -118,6 +118,8 @@ export default function MembershipCard({
         </p>
       </div>
 
+      {raw === "pending" && !canActivate && <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-[11px] text-amber-800">Activation bloquée : vérification du règlement requise.</p>}
+      {item.remaining_amount != null && <p className="mt-2 text-xs text-slate-700">Reste à simuler : <strong>{money(item.remaining_amount)}</strong></p>}
       <div className="mt-auto flex flex-wrap gap-2 pt-4">
         {canActivate && (
           <button

@@ -122,6 +122,12 @@ const handleRegister = async (e) => {
                             autoComplete="new-password"
                             className="w-full rounded-lg border border-zinc-700 bg-zinc-800/50 px-4 py-2.5 text-white"/>
                     </div>
+                    {isSetup === false && <div>
+                        <label htmlFor="setup_key" className="mb-1.5 block text-sm font-medium text-zinc-300">Administrator setup key</label>
+                        <input id="setup_key" name="setup_key" type="password" autoComplete="off"
+                            value={formData.setup_key || ""} onChange={handleChange} required
+                            className="w-full rounded-lg border border-zinc-700 bg-zinc-800/50 px-4 py-2.5 text-sm text-white" />
+                    </div>}
                     <button type="submit" disabled={isLoading}
                         className="group relative flex w-full items-center justify-center overflow-hidden rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-blue-500 hover:shadow-lg hover:shadow-blue-600/30 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-zinc-900 disabled:opacity-70">
                         {isLoading ? (

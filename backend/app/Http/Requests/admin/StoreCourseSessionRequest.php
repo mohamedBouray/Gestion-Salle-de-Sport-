@@ -2,117 +2,73 @@
 
 namespace App\Http\Requests\admin;
 
+use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreCourseSessionRequest extends FormRequest
 {
-    public function authorize(): bool
+    public function authorize(): bool { return $this->user()?->isAdmin() === true; }
+
+    protected function prepareForValidation(): void
     {
-        return $this->user()?->isAdmin() === true;
+        if ($this->exists('location') && is_string($this->input('location'))) {
+            $location = preg_replace('/\s+/u', ' ', trim($this->input('location')));
+            $this->merge(['location' => $location === '' ? null : $location]);
+        }
     }
 
     public function rules(): array
     {
         return [
-            // Cours existant et actif
-            'course_id' => [
-                'required',
-                'integer',
-                Rule::exists('courses', 'id')->where(
-                    fn ($query) => $query
-                        ->where('status', 'active')
-                        ->whereNull('deleted_at')
-                ),
-            ],
-
-            // Coach actif
-            'coach_id' => [
-                'required',
-                'integer',
-                Rule::exists('users', 'id')->where(
-                    fn ($query) => $query
-                        ->where('role', 'coach')
-                        ->where('status', 'active')
-                        ->whereNull('deleted_at')
-                ),
-            ],
-
-            // Date et horaires
-            'start_at' => [
-                'required',
-                'date',
-                'after:now',
-            ],
-
-            'end_at' => [
-                'required',
-                'date',
-                'after:start_at',
-            ],
-
-            // Nombre de places
-            'capacity' => [
-                'required',
-                'integer',
-                'min:1',
-                'max:1000',
-            ],
-
-            // Salle
-            'location' => [
-                'nullable',
-                'string',
-                'max:160',
-            ],
-
-            // Statut initial
-            'status' => [
-                'sometimes',
-                'required',
-                Rule::in(['scheduled']),
-            ],
+            'course_id' => ['bail', 'required', 'integer', Rule::exists('courses', 'id')->where(
+                fn ($q) => $q->where('status', 'active')->whereNull('deleted_at')
+            )],
+            'coach_id' => ['bail', 'required', 'integer', Rule::exists('users', 'id')->where(
+                fn ($q) => $q->where('role', 'coach')->where('status', 'active')->whereNull('deleted_at')
+            )],
+            'start_at' => ['bail', 'required', 'date', 'after:now'],
+            'end_at' => ['bail', 'required', 'date', 'after:start_at'],
+            'capacity' => ['bail', 'required', 'integer', 'between:1,1000'],
+            'location' => ['nullable', 'string', 'max:160'],
+            'status' => ['sometimes', 'required', Rule::in(['scheduled'])],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator) {
+            if ($validator->errors()->has('start_at') || $validator->errors()->has('end_at')) return;
+            try {
+                $tz = config('gym.timezone', 'Africa/Casablanca');
+                $start = Carbon::parse($this->input('start_at'))->setTimezone($tz);
+                $end = Carbon::parse($this->input('end_at'))->setTimezone($tz);
+                if ($start->toDateString() !== $end->toDateString()) {
+                    $validator->errors()->add('end_at', 'La séance doit commencer et finir le même jour.');
+                }
+            } catch (\Throwable $e) { $validator->errors()->add('start_at', 'Date invalide.'); }
+        });
     }
 
     public function messages(): array
     {
         return [
-            'course_id.required' =>
-                'Veuillez sélectionner un cours.',
-
-            'course_id.exists' =>
-                'Le cours sélectionné est indisponible ou inactif.',
-
-            'coach_id.required' =>
-                'Veuillez sélectionner un coach.',
-
-            'coach_id.exists' =>
-                'Le coach sélectionné est indisponible ou inactif.',
-
-            'start_at.required' =>
-                'Veuillez renseigner la date de début.',
-
-            'start_at.after' =>
-                'La séance doit commencer dans le futur.',
-
-            'end_at.required' =>
-                'Veuillez renseigner la date de fin.',
-
-            'end_at.after' =>
-                'La fin doit être après le début.',
-
-            'capacity.required' =>
-                'Veuillez renseigner la capacité.',
-
-            'capacity.min' =>
-                'La capacité doit être supérieure à zéro.',
-
-            'capacity.max' =>
-                'La capacité maximale est de 1000 places.',
-
-            'status.in' =>
-                'Une nouvelle séance doit être programmée.',
+            'course_id.required' => 'Sélectionnez un cours.',
+            'course_id.exists' => 'Le cours doit être actif et non archivé.',
+            'coach_id.required' => 'Sélectionnez un coach.',
+            'coach_id.exists' => 'Le coach doit être actif et non archivé.',
+            'start_at.required' => 'Indiquez la date et heure de début.',
+            'start_at.date' => 'Date de début invalide.',
+            'start_at.after' => 'La séance doit commencer dans le futur.',
+            'end_at.required' => 'Indiquez la date et heure de fin.',
+            'end_at.date' => 'Date de fin invalide.',
+            'end_at.after' => 'La fin doit être après le début.',
+            'capacity.required' => 'Indiquez le nombre de places.',
+            'capacity.integer' => 'La capacité doit être un nombre entier.',
+            'capacity.between' => 'La capacité doit être comprise entre 1 et 1000.',
+            'location.max' => 'La salle ne doit pas dépasser 160 caractères.',
+            'status.in' => 'Une séance nouvelle doit être programmée.',
         ];
     }
 }

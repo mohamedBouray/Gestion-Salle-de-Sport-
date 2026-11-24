@@ -5,7 +5,7 @@ import { adminApi } from "../../../services/AdminApi";
 import { coursesApi } from "../../../services/CoursesApi";
 import { apiError } from "../../../services/api";
 
-const empty = { name: "", description: "", coach_id: "", price: "0", status: "pending" };
+const empty = { name: "", description: "", coach_id: "", status: "pending" };
 const inputClass = "mt-1.5 w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:ring-2 focus:ring-blue-500/10 disabled:bg-slate-100 disabled:opacity-60";
 const labelClass = "block text-xs font-semibold text-slate-700";
 const statusOptions = [
@@ -20,7 +20,7 @@ const getImage = (course) => {
 const asForm = (course) => course ? {
     name: course.name ?? "", description: course.description ?? "",
     coach_id: String(course.coach_id ?? course.coach?.id ?? ""),
-    price: String(course.price ?? "0"), status: course.status ?? "pending",
+    status: course.status ?? "pending",
 } : { ...empty };
 const cleanSpaces = (value) => String(value).trim().replace(/\s+/g, " ");
 
@@ -34,12 +34,6 @@ function validateField(name, raw) {
     }
     if (name === "description" && [...value].length > 5000) return "La description ne doit pas dépasser 5000 caractères.";
     if (name === "coach_id" && value && !/^[1-9]\d*$/.test(value)) return "Sélectionnez un coach valide.";
-    if (name === "price") {
-        if (!value) return "Le prix est obligatoire.";
-        const normalized = value.replace(",", ".");
-        if (!/^\d+(?:\.\d{1,2})?$/.test(normalized) || Number(normalized) > 99999999.99)
-            return "Prix invalide : nombre positif ou 0, maximum 2 décimales.";
-    }
     if (name === "status" && !["pending", "active", "inactive"].includes(value)) return "Statut invalide.";
     return "";
 }
@@ -146,7 +140,6 @@ export default function CourseForm({ course, onClose, onSave }) {
             payload.set("name", cleanSpaces(form.name));
             payload.set("description", form.description.trim());
             payload.set("coach_id", form.coach_id);
-            payload.set("price", form.price.trim().replace(",", "."));
             payload.set("status", form.status);
             if (imageFile) payload.set("image", imageFile);
             await onSave(payload, course?.id);
@@ -157,7 +150,7 @@ export default function CourseForm({ course, onClose, onSave }) {
                     ...old, ...Object.fromEntries(Object.entries(backendErrors).map(([key, val]) =>
                         [key, Array.isArray(val) ? val[0] : String(val)]))
                 }));
-                setError("Vérifiez les champs signalés ci-dessous.");
+                setError(Object.values(backendErrors).flat()[0] || "Vérifiez les champs signalés ci-dessous.");
             } else setError(apiError(err));
         } finally { setSaving(false); }
     }
@@ -210,11 +203,8 @@ export default function CourseForm({ course, onClose, onSave }) {
                                     {fieldError("coach_id")}
                                 </div>
                                 <div>
-                                    <label className={labelClass} htmlFor="course-price">Prix par séance (MAD) <span className="text-red-500">*</span></label>
-                                    <input id="course-price" type="text" inputMode="decimal" value={form.price} onChange={(e) => change("price", e.target.value)}
-                                        onBlur={() => blur("price")} disabled={saving || loadError} placeholder="Ex. : 50.00" aria-invalid={!!errors.price}
-                                        className={styleFor("price")} />
-                                    {fieldError("price")}
+                                    <p className={labelClass}>Tarifs d’abonnement</p>
+                                    <p className="mt-1.5 text-xs text-slate-500">Le prix par période se définit dans la gestion des tarifs.</p>
                                 </div>
                             </div>
                             <div>

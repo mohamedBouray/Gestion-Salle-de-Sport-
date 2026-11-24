@@ -75,6 +75,20 @@ class ReservationController extends Controller
         ], 201);
     }
 
+    // PATCH /api/admin/reservations/{reservation}/cancel
+    // Seul le rôle Admin atteint ce contrôleur (routes protégées).
+    public function cancel(Request $request, CourseEnrollment $reservation): JsonResponse
+    {
+        abort_unless($request->user()?->isAdmin(), 403);
+
+        $cancelled = $this->reservations->cancelForAdmin($reservation);
+
+        return response()->json([
+            'message' => 'Réservation annulée. L’historique a été conservé.',
+            'reservation' => (new ReservationResource($cancelled))->resolve(),
+        ]);
+    }
+
     private function validateFilters(Request $request): array
     {
         return $request->validate([

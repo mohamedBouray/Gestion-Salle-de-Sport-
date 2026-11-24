@@ -6,6 +6,8 @@ use App\Models\Course;
 use App\Models\MemberSubscription;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
+use App\Services\FinanceLedger;
+use App\Services\ReservationService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +15,8 @@ use Illuminate\Validation\ValidationException;
 
 class MembershipService
 {
+    public function __construct(private readonly ReservationService $reservations) {}
+
     private const TIMEZONE = 'Africa/Casablanca';
 
     private const ELIGIBLE_PLAN_TYPES = [
@@ -94,7 +98,7 @@ class MembershipService
             }
         }
 
-        $memberships = $query
+        $memberships = FinanceLedger::withTotals($query)
             ->with([
                 'member' => fn ($q) => $q->withTrashed(),
                 'plan' => fn ($q) => $q->withTrashed(),
@@ -315,6 +319,13 @@ class MembershipService
                     (int) $current->id
                 );
 
+                $finance = FinanceLedger::summary($current);
+                if (!$finance['payment_eligible']) {
+                    throw ValidationException::withMessages([
+                        'payment' => 'Activation refusée : le solde doit être couvert.',
+                    ]);
+                }
+
                 $current->status = 'active';
                 $current->save();
 
@@ -421,9 +432,8 @@ class MembershipService
     ): array {
         $row = DB::transaction(
             function () use ($membership): MemberSubscription {
-                $this->lockActiveMember(
-                    (int) $membership->member_id
-                );
+                $member = User::withTrashed()->whereKey($membership->member_id)
+                    ->lockForUpdate()->firstOrFail();
 
                 $current = $this->lockRow(
                     (int) $membership->id
@@ -445,8 +455,16 @@ class MembershipService
                     ]);
                 }
 
+                $wasActive = $current->status === 'active';
                 $current->status = 'cancelled';
                 $current->save();
+
+                if ($wasActive) {
+                    $this->reservations->assertReservationsStillCovered($member, $current);
+                }
+
+                $current->payments()->where('method', 'cash')->where('status', 'pending')
+                    ->update(['status' => 'cancelled']);
 
                 return $current;
             },
@@ -638,6 +656,8 @@ class MembershipService
 
             'price_at_purchase' =>
                 $membership->price_at_purchase,
+
+            ...FinanceLedger::summary($membership),
 
             'access_now' =>
                 $membership->status === 'active'

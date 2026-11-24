@@ -8,6 +8,7 @@ use App\Models\MemberSubscription;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -80,7 +81,7 @@ class ReservationService
     {
         return $enrollment->load([
             'member:id,name,email,phone',
-            'session.course' => fn (Builder $q) => $q->withTrashed()->select('id', 'name', 'price', 'status'),
+            'session.course' => fn ($q) => $q->withTrashed()->select('id', 'name', 'price', 'status'),
             'session.coach:id,name',
         ]);
     }
@@ -89,7 +90,7 @@ class ReservationService
     {
         return CourseEnrollment::query()->with([
             'member:id,name,email,phone',
-            'session.course' => fn (Builder $q) => $q->withTrashed()->select('id', 'name', 'price', 'status'),
+            'session.course' => fn ($q) => $q->withTrashed()->select('id', 'name', 'price', 'status'),
             'session.coach:id,name',
         ]);
     }
@@ -119,7 +120,7 @@ class ReservationService
         }
 
         if (!empty($filters['search'])) {
-            $text = '%' . trim($filters['search']) . '%';
+            $text = '%' . addcslashes(trim($filters['search']), '%_\\') . '%';
             $query->where(function (Builder $q) use ($text) {
                 $q->whereHas('member', fn (Builder $u) => $u
                     ->where(function (Builder $sub) use ($text) {
@@ -132,7 +133,7 @@ class ReservationService
             });
         }
     }
-    
+
     // =============================================
     // MEMBRE — SEANCES A VENIR
     // =============================================
@@ -158,7 +159,8 @@ class ReservationService
             ->where('status', 'scheduled')
             ->where('start_at', '>', $nowUtc)
             // Ne jamais exposer les cours inactifs / archives au catalogue.
-            ->whereHas('course', fn (Builder $q) => $q->where('status', 'active'));
+            ->whereHas('course', fn (Builder $q) => $q->where('status', 'active'))
+            ->whereHas('coach', fn (Builder $q) => $q->where('role', 'coach')->where('status', 'active'));
 
         // TOUS les filtres sont executes dans MySQL AVANT la pagination.
         if ($courseId !== null) {
@@ -197,10 +199,11 @@ class ReservationService
 
         // L'affichage ne garantit pas une place : book() revalide tout
         // sous verrou (capacite, abonnement, statut, doublon).
-        $sessions->through(function (CourseSession $session) use ($member): array {
+        $subscriptions = $this->eligibleSubscriptions($member);
+        $sessions->through(function (CourseSession $session) use ($subscriptions): array {
             $capacity = (int) $session->capacity;
             $remaining = max(0, $capacity - (int) $session->enrolled_count);
-            $eligible = $this->hasEligibleSubscription($member, $session);
+            $eligible = $this->coversSession($subscriptions, $session);
             $reserved = (bool) $session->already_reserved;
 
             return [
@@ -273,6 +276,10 @@ class ReservationService
                 ]);
             }
 
+            if (!$lockedSession->coach()->where('role', 'coach')->where('status', 'active')->exists()) {
+                throw ValidationException::withMessages(['session_id' => 'Le coach de cette séance doit être actif.']);
+            }
+
             // La contrainte UNIQUE(session_id, member_id) interdit la
             // création d'une seconde ligne : on réactive une annulation
             // uniquement si elle ne possède pas d'historique de paiement.
@@ -294,7 +301,7 @@ class ReservationService
                 ]);
             }
 
-            if (!$this->hasEligibleSubscription($lockedMember, $lockedSession)) {
+            if (!$this->coversSession($this->eligibleSubscriptions($lockedMember), $lockedSession)) {
                 throw ValidationException::withMessages([
                     'subscription' => 'Un abonnement actif (général ou du cours) doit couvrir aujourd’hui et la date de la séance.',
                 ]);
@@ -378,9 +385,9 @@ class ReservationService
                 return $this->show($row);
             }
 
-            if ($row->status === 'attended') {
+            if (!in_array($row->status, ['pending', 'confirmed'], true)) {
                 throw ValidationException::withMessages([
-                    'status' => 'Une présence enregistrée ne peut pas être annulée.',
+                    'status' => 'Cette réservation ne peut plus être annulée.',
                 ]);
             }
 
@@ -406,31 +413,106 @@ class ReservationService
     }
 
     // =============================================
+    // ANNULATION ADMIN — CONSERVE L'HISTORIQUE
+    // =============================================
+
+    public function cancelForAdmin(CourseEnrollment $enrollment): CourseEnrollment
+    {
+        return DB::transaction(function () use ($enrollment) {
+            // Même ordre de verrous que book() et cancelForMember().
+            $session = CourseSession::query()
+                ->whereKey($enrollment->session_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $row = CourseEnrollment::query()
+                ->whereKey($enrollment->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if ((int) $row->session_id !== (int) $session->id) {
+                abort(409, 'La séance de cette réservation a changé. Actualisez la page.');
+            }
+
+            if ($row->status === 'cancelled') {
+                return $this->show($row); // Annulation idempotente.
+            }
+
+            if (!in_array($row->status, ['pending', 'confirmed'], true)) {
+                throw ValidationException::withMessages([
+                    'status' => 'Seules les réservations en attente ou confirmées peuvent être annulées.',
+                ]);
+            }
+
+            if (!$session->start_at || $session->start_at->lessThanOrEqualTo(now('UTC'))) {
+                throw ValidationException::withMessages([
+                    'status' => 'Impossible d’annuler une réservation après le début de la séance.',
+                ]);
+            }
+
+            // Pas de suppression de paiement, remboursement ou correction financière implicite.
+            if ($row->payments()->exists() || (float) $row->price_at_booking > 0) {
+                throw ValidationException::withMessages([
+                    'status' => 'Un paiement est associé : traitez ce dossier financièrement avant toute annulation.',
+                ]);
+            }
+
+            $row->update(['status' => 'cancelled', 'cancelled_at' => now('UTC')]);
+            return $this->show($row);
+        }, 3);
+    }
+
+    // =============================================
     // ELIGIBILITE ABONNEMENT
     // =============================================
 
-    private function hasEligibleSubscription(User $member, CourseSession $session): bool
+    public function assertReservationsStillCovered(User $member, MemberSubscription $cancelled): void
+    {
+        if ($cancelled->starts_at->toDateString() > now($this->timezone())->toDateString()) {
+            return;
+        }
+
+        $cancelled->load(['plan' => fn ($plans) => $plans->withTrashed()]);
+        $cancelledCoverage = new Collection([$cancelled]);
+        $subscriptions = $this->eligibleSubscriptions($member);
+        $reservations = $member->courseEnrollments()->whereIn('status', self::ACTIVE_STATUSES)
+            ->whereHas('session', fn (Builder $query) => $query->where('status', 'scheduled')
+                ->where('start_at', '>', now('UTC')))
+            ->with('session:id,course_id,start_at')->get();
+
+        foreach ($reservations as $reservation) {
+            if ($reservation->session
+                && $this->coversSession($cancelledCoverage, $reservation->session)
+                && !$this->coversSession($subscriptions, $reservation->session)) {
+                throw ValidationException::withMessages([
+                    'membership' => 'Annulez les réservations futures non couvertes avant de clôturer cet abonnement.',
+                ]);
+            }
+        }
+    }
+
+    private function eligibleSubscriptions(User $member): Collection
     {
         $today = now($this->timezone())->toDateString();
+
+        return MemberSubscription::query()->where('member_id', $member->id)->where('status', 'active')
+            ->where('starts_at', '<=', $today)->where('ends_at', '>=', $today)
+            ->with(['plan' => fn ($plans) => $plans->withTrashed()->select('id', 'type', 'course_id')])
+            ->get();
+    }
+
+    private function coversSession(Collection $subscriptions, CourseSession $session): bool
+    {
         $day = $session->start_at->copy()->setTimezone($this->timezone())->toDateString();
 
-        return MemberSubscription::query()
-            ->where('member_id', $member->id)
-            ->where('status', 'active')
-            ->whereDate('starts_at', '<=', $today)
-            ->whereDate('ends_at', '>=', $today)
-            ->whereDate('starts_at', '<=', $day)
-            ->whereDate('ends_at', '>=', $day)
-            ->whereHas('plan', function (Builder $query) use ($session) {
-                $query->withTrashed()->where(function (Builder $q) use ($session) {
-                    $q->where('type', 'general')
-                        ->orWhere(function (Builder $q) use ($session) {
-                            $q->where('type', 'course')
-                                ->where('course_id', $session->course_id);
-                        });
-                });
-            })
-            ->exists();
+        return $subscriptions->contains(fn (MemberSubscription $subscription) =>
+            $subscription->starts_at->toDateString() <= $day
+            && $subscription->ends_at->toDateString() >= $day
+            && ($subscription->plan?->type === 'general' || (
+                $subscription->plan?->type === 'course'
+                && (int) $subscription->plan->course_id === (int) $session->course_id
+            ))
+        );
     }
 
     private function timezone(): string

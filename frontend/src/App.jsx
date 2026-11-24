@@ -1,8 +1,9 @@
+import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 
 // Public pages
-import LandingPage from "./pages/Landing/LandingPage";
+const LandingPage = lazy(() => import("./pages/Landing/LandingPage"));
 import Login from "./pages/Auth/login";
 import Register from "./pages/Auth/register";
 import ForgotPassword from "./pages/Auth/ForgotPassword";
@@ -18,35 +19,35 @@ import LoadingScreen from "./components/shared/LoadingScreen";
 import Profile from "./components/Profile/Profile";
 
 // admin 
-import AdminDashboard from "./pages/Admin/AdminDashboard";
-import MembersPage from "./pages/Admin/MembersPage";
-import CoachesPage from "./pages/Admin/CoachesPage";
-import AdminCoursesPage from "./pages/Admin/CoursesPage";
-import AdminSchedulePage from "./pages/Admin/SchedulePage";
-import AdminReservation from "./pages/Admin/ReservationsPage";
-import AdminPresences from "./pages/Admin/AttendancePage";
-import MessagesPage from "./pages/Admin/MessagesPage";
-import LandingPageSettings from "./pages/Admin/SiteSettingsPage"
-import AdminCourseProposalsPage from "./pages/Admin/CourseProposalsPage";
-import AdminMembershipsPage from "./pages/Admin/MembershipsPage";
-import AdminPaymentsPage from "./pages/Admin/PaymentsPage";
+const AdminDashboard = lazy(() => import("./pages/Admin/AdminDashboard"));
+const MembersPage = lazy(() => import("./pages/Admin/MembersPage"));
+const CoachesPage = lazy(() => import("./pages/Admin/CoachesPage"));
+const AdminCoursesPage = lazy(() => import("./pages/Admin/CoursesPage"));
+const AdminSchedulePage = lazy(() => import("./pages/Admin/SchedulePage"));
+const AdminReservation = lazy(() => import("./pages/Admin/ReservationsPage"));
+const AdminPresences = lazy(() => import("./pages/Admin/AttendancePage"));
+const MessagesPage = lazy(() => import("./pages/Admin/MessagesPage"));
+const LandingPageSettings = lazy(() => import("./pages/Admin/SiteSettingsPage"));
+const AdminCourseProposalsPage = lazy(() => import("./pages/Admin/CourseProposalsPage"));
+const AdminMembershipsPage = lazy(() => import("./pages/Admin/MembershipsPage"));
+const AdminPaymentsPage = lazy(() => import("./pages/Admin/PaymentsPage"));
 
 // coaches 
-import CoachDashboard from "./pages/Coaches/CoachDashboard";
-import CoachCourses from './pages/Coaches/CoursesPage';
-import CoachSchedule from "./pages/Coaches/SchedulePage";
-import CoachMembers from "./pages/Coaches/MembersPage";
-import CoachAttendance from "./pages/Coaches/AttendancePage";
-import AdminTariffsPage from "./pages/Admin/TariffsPage";
+const CoachDashboard = lazy(() => import("./pages/Coaches/CoachDashboard"));
+const CoachCourses = lazy(() => import("./pages/Coaches/CoursesPage"));
+const CoachSchedule = lazy(() => import("./pages/Coaches/SchedulePage"));
+const CoachMembers = lazy(() => import("./pages/Coaches/MembersPage"));
+const CoachAttendance = lazy(() => import("./pages/Coaches/AttendancePage"));
+const AdminTariffsPage = lazy(() => import("./pages/Admin/TariffsPage"));
 
 // members 
-import MemberDashboard from "./pages/Members/MemberDashboard";
-import MemberReservation from './pages/Members/ReservationsPage';
-import MemberCourses from "./pages/Members/CoursesPage";
-import MemberSchedule from "./pages/Members/SchedulePage";
-import MemberMembership from "./pages/Members/MembershipPage";
-import MemberAttendance from "./pages/Members/AttendancePage";
-import MemberPayments from "./pages/Members/PaymentsPage";
+const MemberDashboard = lazy(() => import("./pages/Members/MemberDashboard"));
+const MemberReservation = lazy(() => import("./pages/Members/ReservationsPage"));
+const MemberCourses = lazy(() => import("./pages/Members/CoursesPage"));
+const MemberSchedule = lazy(() => import("./pages/Members/SchedulePage"));
+const MemberMembership = lazy(() => import("./pages/Members/MembershipPage"));
+const MemberAttendance = lazy(() => import("./pages/Members/AttendancePage"));
+const MemberPayments = lazy(() => import("./pages/Members/PaymentsPage"));
 
 
 // Dashboard paths
@@ -194,7 +195,9 @@ function AppRoutes() {
 export default function App() {
     return (
         <AuthProvider>
-            <AppRoutes />
+            <Suspense fallback={<LoadingScreen />}>
+                <AppRoutes />
+            </Suspense>
         </AuthProvider>
     );
 }

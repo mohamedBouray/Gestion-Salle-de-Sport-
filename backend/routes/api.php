@@ -47,14 +47,14 @@ use App\Http\Controllers\Api\Members\MemberAccountController;
 use App\Http\Controllers\Api\Members\MemberPaymentController;
 
 
-Route::get('/setup-status', function () {return response()->json(['is_setup' => User::withTrashed()->exists()]);})->middleware('throttle:30,1');
-Route::post('/contact', [ContactController::class, 'store'])->middleware('throttle:5,1');
-Route::get('/site-settings', [SiteController::class, 'index'])->middleware('throttle:60,1');
-Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1');
-Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
-Route::post('/forgot-password', [PasswordResetController::class, 'forgotPassword'])->middleware('throttle:5,1');
-Route::post('/reset-password', [PasswordResetController::class, 'resetPassword'])->middleware('throttle:5,1');
-Route::post('/accept-invitation', [AccountActivationController::class, 'accept'])->middleware('throttle:10,1');
+Route::get('/setup-status', function () {return response()->json(['is_setup' => User::withTrashed()->exists()]);})->middleware('throttle:30,1,public-setup-status');
+Route::post('/contact', [ContactController::class, 'store'])->middleware('throttle:5,1,public-contact');
+Route::get('/site-settings', [SiteController::class, 'index'])->middleware('throttle:60,1,public-site-settings');
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,1,public-register');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1,public-login');
+Route::post('/forgot-password', [PasswordResetController::class, 'forgotPassword'])->middleware('throttle:5,1,public-forgot-password');
+Route::post('/reset-password', [PasswordResetController::class, 'resetPassword'])->middleware('throttle:5,1,public-reset-password');
+Route::post('/accept-invitation', [AccountActivationController::class, 'accept'])->middleware('throttle:10,1,public-accept-invitation');
 
 Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
@@ -89,6 +89,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         // Reservation 
         Route::get('/admin/reservations',[AdminReservationController::class, 'index']);
         Route::get('/admin/reservations/{reservation}',[AdminReservationController::class, 'show']);
+        Route::patch('/admin/reservations/{reservation}/cancel', [AdminReservationController::class, 'cancel'])->middleware('throttle:20,1');
         Route::get('/admin/course-sessions/{session}/reservations',[AdminReservationController::class, 'bySession']);
         Route::post('/admin/course-sessions/{session}/reservations',[AdminReservationController::class, 'store'] )->middleware('throttle:20,1');
         //  GESTION DES PRESENCES
@@ -125,6 +126,8 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::get('/admin/payments',[PaymentController::class,'index']);
         Route::post('/admin/payments',[PaymentController::class,'store'])->middleware('throttle:20,1');
         Route::patch('/admin/payments/{payment}/refund',[PaymentController::class,'refund'])->middleware('throttle:20,1');
+
+        Route::patch('/admin/payments/{payment}/reject-cash', [PaymentController::class, 'rejectCash'])->middleware('throttle:20,1');
     });
 
     Route::middleware('role:coach')->group(function () {
@@ -160,5 +163,6 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
         Route::get('/member/attendance',[MemberAccountController::class,'attendance']);
         //  MES PAIEMENTS
         Route::get('/member/payments',[MemberPaymentController::class,'index']);
+        Route::post('/member/memberships/{membership}/checkout', [MemberPaymentController::class, 'checkout'])->middleware('throttle:10,1');
     });
 });

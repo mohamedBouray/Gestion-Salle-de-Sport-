@@ -21,8 +21,7 @@ const time = (value) => {
     const parsed = new Date(value);
     return Number.isNaN(parsed.getTime()) ? "—" : parsed.toLocaleTimeString("fr-MA", { hour: "2-digit", minute: "2-digit" });
 };
-const money = (value) => value == null || !Number.isFinite(Number(value)) ? "—"
-    : `${Number(value).toLocaleString("fr-MA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD`;
+
 
 function Row({ label, value }) {
     return (
@@ -142,7 +141,7 @@ export default function CourseDetails({ courseId, onClose }) {
                             {/* Info list */}
                             <dl className="divide-y divide-slate-100 rounded-lg border border-slate-200">
                                 <Row label="Coach principal" value={course.coach?.name || course.coach_name || "Non assigné"} />
-                                <Row label="Prix par séance" value={money(course.price)} />
+                                <Row label="Règlement" value="Par abonnement" />
                                 <Row label="Séances associées" value={sessionsCount ?? "Non renseigné"} />
                                 <Row label="Création" value={date(course.created_at)} />
                                 <Row label="Dernière modification" value={date(course.updated_at)} />

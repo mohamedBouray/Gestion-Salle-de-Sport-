@@ -39,12 +39,16 @@ class DashboardService
                 'reservations_confirmed' => DB::table('course_enrollments')->where('status', 'confirmed')->count(),
                 'visits_today' => DB::table('gym_attendances')->where('role', 'member')->whereIn('status', ['present', 'left'])->whereNotNull('check_in_at')->where('date', $today)->count(),
                 'memberships_active' => DB::table('member_subscriptions')->where('status', 'active')->where('starts_at', '<=', $today)->where('ends_at', '>=', $today)->count(),
+                'simulated_total' => round((float) (clone $payments)->where('method', 'demo')->where('status', 'simulated')->sum('amount'), 2),
                 'revenue_paid' => round((float) (clone $payments)->where('status', 'paid')->sum('amount'), 2),
                 'payments_refunded' => (clone $payments)->where('status', 'refunded')->count(),
                 'proposals_pending' => DB::table('course_proposals')->where('status', 'pending')->count(),
                 'unread_messages' => DB::table('contact_messages')->whereNull('read_at')->count(),
             ],
             'charts' => [
+                'simulated_payments' => $this->series(
+                    (clone $payments)->where('method', 'demo')->where('status', 'simulated'), 'paid_at', $buckets, money: true
+                ),
                 'revenue' => $this->series(
                     DB::table('payments')->where('status', 'paid'), 'paid_at', $buckets, money: true
                 ),
@@ -56,7 +60,8 @@ class DashboardService
                 'memberships' => $this->series(DB::table('member_subscriptions'), 'created_at', $buckets),
                 'payment_status' => $this->distribution(
                     DB::table('payments'), 'created_at', $buckets, [
-                        'pending' => 'En attente', 'paid' => 'Payé', 'refunded' => 'Remboursé',
+                        'pending' => 'En attente', 'paid' => 'Encaissé (historique)',
+                        'simulated' => 'Simulé', 'refunded' => 'Remboursé',
                     ]
                 ),
             ],
@@ -147,6 +152,7 @@ class DashboardService
                 'reservations_total' => (clone $reservations)->count(),
                 'visits_month' => (clone $visits)->where('date', '>=', $monthStart)->where('date', '<=', $today)->count(),
                 'visits_total' => (clone $visits)->count(),
+                'simulated_total' => round((float) (clone $payments)->where('method', 'demo')->where('status', 'simulated')->sum('amount'), 2),
                 'paid_total' => round((float) (clone $payments)->where('status', 'paid')->sum('amount'), 2),
             ],
             'subscription' => [
@@ -158,6 +164,9 @@ class DashboardService
             'charts' => [
                 'visits' => $this->series(clone $visits, 'date', $buckets, dateOnly: true),
                 'reservations' => $this->series(clone $reservations, 'created_at', $buckets),
+                'simulated_payments' => $this->series(
+                    (clone $payments)->where('method', 'demo')->where('status', 'simulated'), 'paid_at', $buckets, money: true
+                ),
                 'payments' => $this->series((clone $payments)->where('status', 'paid'), 'paid_at', $buckets, money: true),
                 'reservation_status' => $this->distribution(clone $reservations, 'created_at', $buckets, [
                     'pending' => 'En attente', 'confirmed' => 'Confirmée',
@@ -224,13 +233,26 @@ class DashboardService
         Builder $query, string $column, array $buckets,
         bool $dateOnly = false, bool $money = false
     ): array {
-        $values = [];
-        foreach ($buckets as $bucket) {
-            $scope = $this->slice(clone $query, $column, $bucket, $dateOnly);
-            $value = $money ? round((float) $scope->sum('amount'), 2) : $scope->count();
-            $values[] = ['label' => $bucket['label'], 'value' => $value];
+        $from = $dateOnly ? 'from_date' : 'from_utc';
+        $to = $dateOnly ? 'to_date' : 'to_utc';
+        $range = [$from => $buckets[0][$from], $to => $buckets[array_key_last($buckets)][$to]];
+        $expression = str_starts_with($column, 'COALESCE(') ? $column : $query->getGrammar()->wrap($column);
+        $aggregate = $this->slice(clone $query, $column, $range, $dateOnly)->select([]);
+        $amount = $money ? 'amount' : '1';
+
+        foreach ($buckets as $index => $bucket) {
+            $aggregate->selectRaw(
+                "COALESCE(SUM(CASE WHEN {$expression} >= ? AND {$expression} < ? THEN {$amount} ELSE 0 END), 0) AS bucket_{$index}",
+                [$bucket[$from], $bucket[$to]]
+            );
         }
-        return $values;
+
+        $row = (array) $aggregate->first();
+
+        return array_map(fn (array $bucket, int $index) => [
+            'label' => $bucket['label'],
+            'value' => $money ? round((float) $row["bucket_{$index}"], 2) : (int) $row["bucket_{$index}"],
+        ], $buckets, array_keys($buckets));
     }
 
     private function periodCount(Builder $query, string $column, array $buckets): int
@@ -248,14 +270,14 @@ class DashboardService
             'from_utc' => $buckets[0]['from_utc'],
             'to_utc' => $buckets[array_key_last($buckets)]['to_utc'],
         ];
-        $query = $this->slice($query, $column, $range);
+        $counts = $this->slice($query, $column, $range)
+            ->select('status')->selectRaw('COUNT(*) AS total')->groupBy('status')
+            ->pluck('total', 'status');
         $values = [];
         foreach ($statuses as $status => $label) {
-            $values[] = [
-                'label' => $label,
-                'value' => (clone $query)->where('status', $status)->count(),
-            ];
+            $values[] = ['label' => $label, 'value' => (int) ($counts[$status] ?? 0)];
         }
+
         return $values;
     }
 

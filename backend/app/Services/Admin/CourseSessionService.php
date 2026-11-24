@@ -353,7 +353,7 @@ class CourseSessionService
             ->whereKey($coachId)
             ->where('role', 'coach')
             ->where('status', 'active')
-            ->exists();
+            ->lockForUpdate()->first(['id']);
 
         if (!$valid) {
             throw ValidationException::withMessages([

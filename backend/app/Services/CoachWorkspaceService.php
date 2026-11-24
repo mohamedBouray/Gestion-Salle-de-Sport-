@@ -50,7 +50,7 @@ class CoachWorkspaceService
             if ($locked->status !== 'pending') {
                 throw ValidationException::withMessages(['proposal' => 'Cette proposition a déjà été traitée.']);
             }
-            $coach = User::query()->whereKey($locked->coach_id)->where('role', 'coach')->where('status', 'active')->first();
+            $coach = User::query()->whereKey($locked->coach_id)->where('role', 'coach')->where('status', 'active')->lockForUpdate()->first();
             if (!$coach) {
                 throw ValidationException::withMessages(['coach' => 'Coach inactif ou introuvable.']);
             }

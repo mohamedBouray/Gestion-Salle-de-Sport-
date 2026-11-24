@@ -17,6 +17,8 @@ class AuthController extends Controller
     
     public function register(Request $request)
     {
+        abort_unless($request->hasSession(), 419);
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:160'],
             'email' => [
@@ -26,6 +28,7 @@ class AuthController extends Controller
                 'unique:users,email',
             ],
             'phone' => ['nullable', 'string', 'max:32'],
+            'setup_key' => ['nullable', 'string', 'max:255'],
             'password' => [
                 'required',
                 'confirmed',
@@ -60,10 +63,21 @@ class AuthController extends Controller
                         ]);
                     }
 
+                    $setupKey = (string) config('auth.initial_admin_setup_key');
+                    if ($setupKey === '' || !hash_equals($setupKey, $validated['setup_key'] ?? '')) {
+                        throw ValidationException::withMessages([
+                            'setup_key' => 'Clé de configuration administrateur invalide.',
+                        ]);
+                    }
+
                     $role = User::ADMIN;
                 } else {
                     // All public registrations become members
                     $role = User::MEMBER;
+                }
+
+                if (User::withTrashed()->where('email', $validated['email'])->exists()) {
+                    throw ValidationException::withMessages(['email' => 'Cette adresse e-mail est déjà utilisée.']);
                 }
 
                 $user = new User();
@@ -106,6 +120,8 @@ class AuthController extends Controller
     // LOGIN
     public function login(Request $request)
     {
+        abort_unless($request->hasSession(), 419);
+
         $validated = $request->validate([
             'email' => 'required|email',
             'password' => 'required|string',

@@ -96,8 +96,7 @@ class MembershipController extends Controller
     ): JsonResponse {
         return response()->json([
             'message' =>
-                'Abonnement annulé. Les réservations existantes '
-                . 'et les paiements ne sont pas modifiés automatiquement.',
+                'Abonnement annulé. Les demandes Cash ouvertes ont été clôturées.',
 
             'membership' => $this->memberships->cancel(
                 $membership

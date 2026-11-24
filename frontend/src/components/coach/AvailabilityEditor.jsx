@@ -18,7 +18,12 @@ export default function AvailabilityEditor({ value, loading, onSaved }) {
   function add() { if (slots.length<28) setSlots(s=>[...s,{ day_of_week: 1, start_time: "09:00", end_time: "12:00" }]); }
   async function save() {
     setError(""); setNotice("");
-    if (slots.some(s => !s.start_time || !s.end_time || s.start_time>=s.end_time)) { setError("Vérifiez les horaires : fin après début."); return; }
+    if (slots.some(s => !s.start_time || !s.end_time || s.start_time >= s.end_time)) { setError("Vérifiez les horaires : fin après début."); return; }
+    if (slots.length > 28) { setError("Maximum 28 créneaux par semaine."); return; }
+    const sorted = [...slots].sort((a,b) => a.day_of_week - b.day_of_week || a.start_time.localeCompare(b.start_time));
+    if (sorted.some((s,i) => i > 0 && s.day_of_week === sorted[i-1].day_of_week && s.start_time < sorted[i-1].end_time)) {
+      setError("Deux disponibilités se chevauchent le même jour. Corrigez les horaires."); return;
+    }
     setSaving(true);
     try {
       const result = await coachCoursesPlanningApi.saveAvailabilities(slots);

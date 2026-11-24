@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import {
   ChevronLeft,
@@ -14,6 +13,7 @@ import {
 
 import MembershipCard from "../../components/admin/memberships/MembershipCard";
 import MembershipForm from "../../components/admin/memberships/MembershipForm";
+import ConfirmDialog from "../../components/shared/ConfirmDialog";
 import { membershipsApi } from "../../services/MembershipsApi";
 import { apiError } from "../../services/api";
 
@@ -46,6 +46,8 @@ export default function MembershipsPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [formOpen, setFormOpen] = useState(false);
+  const [confirmation, setConfirmation] = useState(null);
+  const [confirmationError, setConfirmationError] = useState("");
 
   // Charger les formules
   useEffect(() => {
@@ -143,40 +145,27 @@ export default function MembershipsPage() {
     );
   }
 
-  // Activer / renouveler / annuler
-  async function action(item, type) {
+  function askAction(item, type) {
     if (busyId !== null) return;
-
-    const prompts = {
-      activate:
-        `Activer l'abonnement de ${item.member?.name || "ce membre"} ? ` +
-        "Cette action n'enregistre aucun paiement.",
-
-      renew:
-        `Renouveler l'abonnement de ${item.member?.name || "ce membre"} ? ` +
-        "Un nouvel abonnement en attente sera créé.",
-
-      cancel:
-        `Annuler l'abonnement de ${item.member?.name || "ce membre"} ?`,
-    };
-
-    if (!window.confirm(prompts[type])) return;
-
-    try {
-      setBusyId(item.id);
-      setError("");
-      setNotice("");
-
-      const result = await membershipsApi[type](item.id);
-
-      refresh(
-        result.message || "Opération enregistrée."
-      );
-    } catch (err) {
-      setError(apiError(err));
-    } finally {
-      setBusyId(null);
+    if (type === "activate" && item.payment_eligible !== true) {
+      setError("Activation refusée : règlement confirmé requis."); return;
     }
+    setConfirmation({ item, type }); setConfirmationError("");
+  }
+
+  async function performAction() {
+    if (!confirmation || busyId !== null) return;
+    const { item, type } = confirmation;
+    if (type === "activate" && item.payment_eligible !== true) {
+      setConfirmationError("Règlement confirmé requis."); return;
+    }
+    setBusyId(item.id); setConfirmationError(""); setError(""); setNotice("");
+    try {
+      const result = await membershipsApi[type](item.id);
+      setConfirmation(null);
+      refresh(result.message || "Opération enregistrée.");
+    } catch (err) { setConfirmationError(apiError(err)); }
+    finally { setBusyId(null); }
   }
 
   const currentPage =
@@ -250,6 +239,9 @@ export default function MembershipsPage() {
           ))}
         </div>
 
+        <div className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
+          <strong>Activation sécurisée :</strong> un abonnement en attente ne doit être activé qu'après confirmation du règlement. Les soldes et le droit d'activation seront calculés par Laravel dans la prochaine étape.
+        </div>
         {/* Filtres */}
         <div className="flex flex-wrap gap-2 rounded-xl border border-slate-200 bg-white p-3">
           <label className="relative min-w-[170px] flex-1">
@@ -333,9 +325,9 @@ export default function MembershipsPage() {
                 key={item.id}
                 item={item}
                 busy={busyId !== null}
-                onActivate={(m) => action(m, "activate")}
-                onRenew={(m) => action(m, "renew")}
-                onCancel={(m) => action(m, "cancel")}
+                onActivate={(m) => askAction(m, "activate")}
+                onRenew={(m) => askAction(m, "renew")}
+                onCancel={(m) => askAction(m, "cancel")}
               />
             ))}
           </div>
@@ -381,6 +373,14 @@ export default function MembershipsPage() {
         )}
       </div>
 
+      <ConfirmDialog open={Boolean(confirmation)}
+        title={{ activate: "Activer cet abonnement ?", renew: "Renouveler cet abonnement ?", cancel: "Annuler cet abonnement ?" }[confirmation?.type] || "Confirmer l'action ?"}
+        description={{ activate: "L'activation nécessite un règlement préalablement confirmé par Laravel.", renew: "Un nouvel abonnement en attente sera créé.", cancel: "L'abonnement sera annulé, sans remboursement automatique." }[confirmation?.type] || ""}
+        subject={confirmation?.item ? `${confirmation.item.member?.name || "Membre"} · ${confirmation.item.plan?.name || "Abonnement"}` : ""}
+        variant={confirmation?.type === "cancel" ? "danger" : "primary"}
+        confirmLabel={{ activate: "Activer", renew: "Renouveler", cancel: "Annuler l'abonnement" }[confirmation?.type] || "Confirmer"}
+        loading={busyId !== null} error={confirmationError}
+        onCancel={() => { if (busyId === null) setConfirmation(null); }} onConfirm={performAction}/>
       {/* Formulaire */}
       {formOpen && (
         <MembershipForm

@@ -151,6 +151,7 @@ $payments = $query
 
             'stats' => [
                 'total' => (clone $base)->count(),
+                'simulated' => (clone $base)->where('method', 'demo')->where('status', 'simulated')->count(),
 
                 'paid' => (clone $base)
                     ->where('status', 'paid')
@@ -161,8 +162,9 @@ $payments = $query
                     ->count(),
 
                 'collected_amount' => (string) (clone $base)
-                    ->where('status', 'paid')
-                    ->sum('amount'),
+                    ->where('status', 'paid')->where('method', '!=', 'demo')->sum('amount'),
+                'pending_cash' => (clone $base)->where('status', 'pending')->where('method', 'cash')->count(),
+                'demo_amount' => (string) (clone $base)->where('status', 'simulated')->where('method', 'demo')->sum('amount'),
             ],
         ];
     }

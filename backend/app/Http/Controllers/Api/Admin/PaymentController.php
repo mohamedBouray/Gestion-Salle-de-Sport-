@@ -26,12 +26,12 @@ class PaymentController extends Controller
 
             'status' => [
                 'nullable',
-                Rule::in(['pending', 'paid', 'refunded']),
+                Rule::in(['pending', 'paid', 'refunded', 'simulated', 'cancelled']),
             ],
 
             'method' => [
                 'nullable',
-                Rule::in(['cash', 'virement', 'other']),
+                Rule::in(['cash', 'virement', 'other', 'demo']),
             ],
 
             'from' => [
@@ -81,13 +81,21 @@ class PaymentController extends Controller
         StorePaymentRequest $request
     ): JsonResponse {
         return response()->json([
-            'message' => 'Paiement enregistré avec succès.',
+            'message' => 'Règlement simulé enregistré.',
 
             'payment' => $this->payments->create(
                 $request->user(),
                 $request->validated()
             ),
         ], 201);
+    }
+
+    public function rejectCash(Request $request, Payment $payment): JsonResponse
+    {
+        return response()->json([
+            'message' => 'Demande Cash refusée, aucun encaissement enregistré.',
+            'payment' => $this->payments->rejectCash($request->user(), $payment),
+        ]);
     }
 
     // PATCH /api/admin/payments/{payment}/refund
@@ -97,7 +105,7 @@ class PaymentController extends Controller
     ): JsonResponse {
         return response()->json([
             'message' =>
-                'Remboursement enregistré dans le suivi interne.',
+                'Remboursement simulé enregistré.',
 
             'payment' => $this->payments->refund(
                 $request->user(),
