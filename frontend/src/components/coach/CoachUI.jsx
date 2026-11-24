@@ -1,3 +1,4 @@
+import { gymDateKey } from "../../utils/gymDates.js";
 import { useEffect, useState } from "react";
 import { AlertCircle, ArrowRight, CalendarDays, Inbox, LoaderCircle, RefreshCw, Search } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -62,9 +63,9 @@ export function Badge({ status }) {
   return <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${style}`}>{label}</span>;
 }
 
-export const dateTime = (value) => value ? new Intl.DateTimeFormat("fr-MA", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value)) : "—";
-export const dayTime = (value) => value ? new Intl.DateTimeFormat("fr-MA", { hour: "2-digit", minute: "2-digit" }).format(new Date(value)) : "—";
-export const dateKey = (d) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+export const dateTime = (value) => value ? new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value)) : "—";
+export const dayTime = (value) => value ? new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca", hour: "2-digit", minute: "2-digit" }).format(new Date(value)) : "—";
+export const dateKey = gymDateKey;
 export const monogram = (value) => (value || "?").trim().split(/\s+/).slice(0, 2).map((p) => p[0]).join("").toUpperCase();
 export function Detail({ icon: Icon, children }) { return <span className="inline-flex min-w-0 items-center gap-1.5 text-xs text-slate-500"><Icon size={14} className="shrink-0 text-slate-400"/><span className="truncate">{children}</span></span>; }
 export function PeriodNote() { return <span className="inline-flex items-center gap-1 text-xs text-slate-400"><CalendarDays size={13}/> Données de votre activité</span>; }

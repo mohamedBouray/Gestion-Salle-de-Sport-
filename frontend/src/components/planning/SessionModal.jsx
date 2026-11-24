@@ -1,3 +1,4 @@
+import { gymLocalDateTime, gymDateKey, gymInstant } from "../../utils/gymDates.js";
 import FrenchDateInput from "../shared/FrenchDateInput";
 import { useEffect, useState } from "react";
 import { AlertCircle, Info, LoaderCircle, X } from "lucide-react";
@@ -34,22 +35,7 @@ const weekDays = [
 // HELPERS
 // =====================================
 
-function localDateTime(value) {
-  if (!value) return "";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-
-  const pad = (n) => String(n).padStart(2, "0");
-
-  return (
-    `${date.getFullYear()}-` +
-    `${pad(date.getMonth() + 1)}-` +
-    `${pad(date.getDate())}T` +
-    `${pad(date.getHours())}:` +
-    `${pad(date.getMinutes())}`
-  );
-}
+const localDateTime = gymLocalDateTime;
 
 function initialForm(session, initialDate = "") {
   if (session) {
@@ -64,17 +50,12 @@ function initialForm(session, initialDate = "") {
     };
   }
 
-  const start = new Date();
-  start.setMinutes(0, 0, 0);
-  start.setHours(start.getHours() + 1);
-
-  if (initialDate && initialDate > localDateTime(start).slice(0, 10)) {
-    const [year, month, day] = initialDate.split("-").map(Number);
-    start.setFullYear(year, month - 1, day);
-    start.setHours(9, 0, 0, 0);
+  const now = new Date();
+  let start = new Date(Math.ceil((now.getTime() + 60000) / 3600000) * 3600000);
+  if (initialDate && initialDate > gymDateKey(start)) {
+    start = gymInstant(`${initialDate}T09:00`);
   }
-  const end = new Date(start);
-  end.setHours(end.getHours() + 1);
+  const end = new Date(start.getTime() + 3600000);
 
   return {
     course_id: "",
@@ -125,6 +106,7 @@ export default function SessionModal({
   saving = false,
 }) {
   const isEditing = Boolean(session?.id);
+  const locked = isEditing && Number(session.active_reservation_count ?? session.enrolled_count ?? 0) > 0;
 
   const [form, setForm] = useState(() => initialForm(session, initialDate));
 
@@ -252,12 +234,12 @@ export default function SessionModal({
     // Laravel reste la validation finale. Afficher les erreurs sous chaque champ.
     const problems = {};
     const statusOnly = isEditing && form.status !== session.status;
-    const start = new Date(form.start_at), end = new Date(form.end_at);
+    const start = gymInstant(form.start_at), end = gymInstant(form.end_at);
     if (!statusOnly) {
       if (!form.course_id) problems.course_id = "Sélectionnez un cours.";
       if (!form.coach_id) problems.coach_id = "Sélectionnez un coach.";
-      if (!form.start_at || Number.isNaN(start.getTime())) problems.start_at = "Date de début invalide.";
-      if (!form.end_at || Number.isNaN(end.getTime())) problems.end_at = "Date de fin invalide.";
+      if (!form.start_at || Number.isNaN(start.getTime())) problems.start_at = "Date de début invalide ou heure ambiguë au Maroc.";
+      if (!form.end_at || Number.isNaN(end.getTime())) problems.end_at = "Date de fin invalide ou heure ambiguë au Maroc.";
       if (!problems.start_at && !problems.end_at && end <= start) problems.end_at = "La fin doit être après le début.";
       if (!problems.start_at && start <= new Date()) problems.start_at = "La séance doit commencer dans le futur.";
       if (!/^[1-9]\d*$/.test(String(form.capacity)) || Number(form.capacity) > 1000) problems.capacity = "Capacité entière entre 1 et 1000.";
@@ -280,7 +262,8 @@ export default function SessionModal({
     try {
       const payload = statusOnly ? { status: form.status } : {
         course_id: Number(form.course_id), coach_id: Number(form.coach_id),
-        start_at: start.toISOString(), end_at: end.toISOString(),
+        ...(!isEditing || form.start_at !== localDateTime(session.start_at) ? { start_at: start.toISOString() } : {}),
+        ...(!isEditing || form.end_at !== localDateTime(session.end_at) ? { end_at: end.toISOString() } : {}),
         capacity: Number(form.capacity), location: form.location.trim() || null,
         status: form.status,
       };
@@ -354,10 +337,12 @@ export default function SessionModal({
               </div>
             )}
 
+            {locked && <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">Réservations actives : cours, coach et horaires verrouillés. Vous pouvez modifier la salle, la capacité ou annuler la séance.</p>}
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="Cours sportif" required error={fieldErrors.course_id}>
                 <select
                   required
+                  disabled={locked}
                   value={form.course_id}
                   onChange={(event) => selectCourse(event.target.value)}
                   className={inputClass}
@@ -381,6 +366,7 @@ export default function SessionModal({
               <Field label="Coach responsable" required error={fieldErrors.coach_id}>
                 <select
                   required
+                  disabled={locked}
                   value={form.coach_id}
                   onChange={(event) => change("coach_id", event.target.value)}
                   className={inputClass}
@@ -444,6 +430,7 @@ export default function SessionModal({
                   type="datetime-local"
                   required
                   min={localDateTime(new Date(Date.now() + 60000))}
+                  disabled={locked}
                   value={form.start_at}
                   onChange={(event) => change("start_at", event.target.value)}
                   className={inputClass}
@@ -455,6 +442,7 @@ export default function SessionModal({
                   type="datetime-local"
                   required
                   min={form.start_at || localDateTime(new Date(Date.now() + 60000))}
+                  disabled={locked}
                   value={form.end_at}
                   onChange={(event) => change("end_at", event.target.value)}
                   className={inputClass}

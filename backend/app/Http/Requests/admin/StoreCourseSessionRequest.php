@@ -42,8 +42,8 @@ class StoreCourseSessionRequest extends FormRequest
             if ($validator->errors()->has('start_at') || $validator->errors()->has('end_at')) return;
             try {
                 $tz = config('gym.timezone', 'Africa/Casablanca');
-                $start = Carbon::parse($this->input('start_at'))->setTimezone($tz);
-                $end = Carbon::parse($this->input('end_at'))->setTimezone($tz);
+                $start = Carbon::parse($this->input('start_at'), config('gym.timezone', 'Africa/Casablanca'))->setTimezone($tz);
+                $end = Carbon::parse($this->input('end_at'), config('gym.timezone', 'Africa/Casablanca'))->setTimezone($tz);
                 if ($start->toDateString() !== $end->toDateString()) {
                     $validator->errors()->add('end_at', 'La séance doit commencer et finir le même jour.');
                 }

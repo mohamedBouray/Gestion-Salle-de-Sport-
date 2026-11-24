@@ -3,6 +3,7 @@
 namespace App\Services\Admin;
 
 use App\Models\AccountInvitation;
+use App\Models\CourseEnrollment;
 use App\Models\User;
 use App\Services\AccountInvitationService;
 use Illuminate\Support\Facades\DB;
@@ -33,7 +34,9 @@ class MemberService
             $query->where('status', $filters['status']);
         }
 
-        $base = User::query()->where('role', User::MEMBER);
+        $counts = User::query()->where('role', User::MEMBER)->toBase()->selectRaw(
+            "COUNT(*) AS total, COUNT(CASE WHEN status = 'active' THEN 1 END) AS active, COUNT(CASE WHEN status = 'pending' THEN 1 END) AS pending, COUNT(CASE WHEN status = 'inactive' THEN 1 END) AS inactive"
+        )->first();
 
         return [
             'members' => $query->latest('id')
@@ -41,10 +44,10 @@ class MemberService
                 ->withQueryString(),
 
             'stats' => [
-                'total' => (clone $base)->count(),
-                'active' => (clone $base)->where('status', 'active')->count(),
-                'pending' => (clone $base)->where('status', 'pending')->count(),
-                'inactive' => (clone $base)->where('status', 'inactive')->count(),
+                'total' => (int) $counts->total,
+                'active' => (int) $counts->active,
+                'pending' => (int) $counts->pending,
+                'inactive' => (int) $counts->inactive,
             ],
         ];
     }
@@ -89,7 +92,7 @@ class MemberService
         ];
     }
 
-   
+
     public function update(User $member, array $data): User
     {
         $this->ensureMember($member);
@@ -114,11 +117,12 @@ class MemberService
             $member->save();
 
             if ($member->status === 'inactive') {
-                $member->sessions()->delete();
+                $this->cancelFutureReservations($member);
+                $this->revokeAccess($member);
             }
 
             return $member->fresh();
-        });
+        }, 3);
     }
 
 
@@ -127,13 +131,16 @@ class MemberService
         $this->ensureMember($member);
 
         DB::transaction(function () use ($member) {
+            $member = User::whereKey($member->id)->lockForUpdate()->firstOrFail();
+            $this->cancelFutureReservations($member);
+            $this->revokeAccess($member);
             AccountInvitation::where('user_id', $member->id)
                 ->whereNull('accepted_at')
                 ->whereNull('revoked_at')
                 ->update(['revoked_at' => now()]);
 
             $member->delete();
-        });
+        }, 3);
     }
 
     public function resendInvitation(User $member, User $admin): bool
@@ -141,6 +148,25 @@ class MemberService
         $this->ensureMember($member);
 
         return $this->invitations->send($member, $admin);
+    }
+
+    // Member lock prevents new bookings while the account is being disabled.
+    // Retry transactions on deadlocks with concurrent booking/cancellation.
+    private function cancelFutureReservations(User $member): void
+    {
+        $future = CourseEnrollment::query()->where('member_id', $member->id)
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->whereHas('session', fn ($query) => $query->where('start_at', '>', now('UTC')));
+
+        // Blocking a user must not be prevented by an old payment.
+        // Keep payment records intact; any refund is a separate admin action.
+        $future->update(['status' => 'cancelled', 'cancelled_at' => now('UTC')]);
+    }
+
+    private function revokeAccess(User $member): void
+    {
+        $member->forceFill(['remember_token' => null])->save();
+        $member->sessions()->delete();
     }
 
     private function ensureMember(User $member): void

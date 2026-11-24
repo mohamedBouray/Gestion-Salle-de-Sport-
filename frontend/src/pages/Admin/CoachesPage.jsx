@@ -1,3 +1,4 @@
+import { gymDateKey } from "../../utils/gymDates.js";
 import { useEffect, useState } from "react";
 import {
     Plus, Search, ChevronLeft, ChevronRight, Users, UserRoundCheck,
@@ -27,7 +28,7 @@ const statusLabels = {
 };
 
 const formatDate = (value) =>
-    value ? new Date(value).toLocaleDateString("fr-MA") : "";
+    value ? new Date(value).toLocaleDateString("fr-MA", { timeZone: "Africa/Casablanca" }) : "";
 
 export default function CoachesPage() {
     const [search, setSearch] = useState("");
@@ -162,7 +163,7 @@ export default function CoachesPage() {
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement("a");
             link.href = url;
-            const day = new Date().toLocaleDateString("en-CA");
+            const day = gymDateKey();
             link.download = `coachs-${day}.xlsx`;
             document.body.appendChild(link);
             link.click();

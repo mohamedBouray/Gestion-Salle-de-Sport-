@@ -17,8 +17,22 @@ const api = axios.create({
 // CSRF COOKIE (LARAVEL SANCTUM)
 // ========================================
 
-export async function getCsrfCookie() {
-    await api.get("/sanctum/csrf-cookie");
+let csrfReady = false;
+let csrfRequest = null;
+
+export function resetCsrfCookie() {
+    csrfReady = false;
+}
+
+export async function getCsrfCookie(force = false) {
+    if (csrfRequest) return csrfRequest;
+    const hasCookie = typeof document !== "undefined" && /(?:^|;\s*)XSRF-TOKEN=/.test(document.cookie);
+    if (!force && csrfReady && hasCookie) return;
+    csrfRequest = api.get("/sanctum/csrf-cookie")
+        .then(() => { csrfReady = true; })
+        .catch((error) => { resetCsrfCookie(); throw error; })
+        .finally(() => { csrfRequest = null; });
+    return csrfRequest;
 }
 
 // ========================================
@@ -65,6 +79,9 @@ api.interceptors.response.use(
     (error) => {
         const status = error.response?.status;
         const code = error.response?.data?.code;
+        if (status === 419 || status === 401 || code === "ACCOUNT_INACTIVE" || code === "EMAIL_UNVERIFIED") {
+            resetCsrfCookie();
+        }
 
         const path = (error.config?.url || "").split("?")[0];
 
@@ -86,7 +103,8 @@ api.interceptors.response.use(
             (
                 status === 401 ||
                 status === 419 ||
-                code === "ACCOUNT_INACTIVE"
+                code === "ACCOUNT_INACTIVE" ||
+                code === "EMAIL_UNVERIFIED"
             )
         ) {
             window.dispatchEvent(

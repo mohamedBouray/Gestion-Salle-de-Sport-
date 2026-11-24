@@ -1,3 +1,4 @@
+import { gymLocalDateTime, gymInstant } from "../../../utils/gymDates.js";
 import FrenchDateInput from "../../shared/FrenchDateInput";
 import { useEffect, useMemo, useState } from "react";
 import { LoaderCircle, Search, X } from "lucide-react";
@@ -10,13 +11,7 @@ const inputClass =
 
 const labelClass = "block text-xs font-semibold text-slate-700";
 
-function localDateTime() {
-  const now = new Date();
-
-  return new Date(
-    now.getTime() - now.getTimezoneOffset() * 60000
-  ).toISOString().slice(0, 16);
-}
+const localDateTime = gymLocalDateTime;
 
 export default function PaymentForm({ onClose, onSave }) {
   const [search, setSearch] = useState("");
@@ -169,7 +164,7 @@ export default function PaymentForm({ onClose, onSave }) {
       setError("Le montant dépasse le solde restant de l'abonnement."); return;
     }
     if (!/^\d+(?:\.\d{1,2})?$/.test(amount.trim())) { setError("Saisissez un montant avec 2 décimales maximum."); return; }
-    if (!paidAt || Number.isNaN(new Date(paidAt).getTime())) {
+    if (!paidAt || Number.isNaN(gymInstant(paidAt).getTime())) {
       setError("Indiquez une date de paiement valide.");
       return;
     }

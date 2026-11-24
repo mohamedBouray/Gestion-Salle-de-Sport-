@@ -1,3 +1,4 @@
+import { gymDateKey, gymCalendarDay, addCalendarDays } from "../../utils/gymDates.js";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
@@ -31,31 +32,11 @@ const defaultFilters = {
   coachId: "all",
 };
 
-function addDays(date, amount) {
-  const result = new Date(date);
-  result.setDate(result.getDate() + amount);
-  return result;
-}
-
+const addDays = addCalendarDays;
+const dateKey = gymDateKey;
 function startOfWeek(date) {
-  const result = new Date(date);
-  result.setHours(12, 0, 0, 0);
-  result.setDate(result.getDate() - ((result.getDay() + 6) % 7));
-  return result;
-}
-
-function dateKey(date) {
-  const value = new Date(date);
-
-  if (Number.isNaN(value.getTime())) {
-    return "";
-  }
-
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, "0");
-  const day = String(value.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
+  const day = gymCalendarDay(date);
+  return addCalendarDays(day, -((day.getUTCDay() + 6) % 7));
 }
 
 function extractCollection(response, key) {
@@ -73,7 +54,7 @@ function extractCollection(response, key) {
 }
 
 function formatDate(date) {
-  return new Intl.DateTimeFormat("fr-MA", {
+  return new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -98,7 +79,7 @@ export default function PlanningPage({ role = "admin" }) {
   const [clock, setClock] = useState(() => Date.now());
   const [creationDate, setCreationDate] = useState("");
   useEffect(() => {
-    const timer = window.setInterval(() => setClock(Date.now()), 1000);
+    const timer = window.setInterval(() => setClock(Date.now()), 15000);
     return () => window.clearInterval(timer);
   }, []);
   const sessions = useMemo(() => rawSessions.map((session) =>
@@ -140,7 +121,7 @@ export default function PlanningPage({ role = "admin" }) {
 
   const weekLabel = `${formatDate(weekStart)} - ${formatDate(weekEnd)}`;
 
-  const monthLabel = new Intl.DateTimeFormat("fr-MA", {
+  const monthLabel = new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca",
     month: "long",
     year: "numeric",
   }).format(weekStart);
@@ -625,7 +606,7 @@ export default function PlanningPage({ role = "admin" }) {
         description="La séance sera annulée mais restera dans l'historique du planning."
         subject={cancelTarget?.course?.name || cancelTarget?.course_name || "Cours sportif"}
         subjectLabel="SÉANCE SÉLECTIONNÉE"
-        warning="L'annulation est refusée si la séance a commencé ou comporte des réservations actives."
+        warning="Les réservations sans paiement seront annulées. Une séance commencée ou un dossier financier nécessite un traitement manuel."
         confirmLabel="Annuler la séance"
         variant="danger"
         loading={saving}

@@ -7,6 +7,10 @@ import {
 } from "lucide-react";
 
 const statusStyles = {
+  absent: { label: "Absent(e)", className: "bg-red-50 text-red-700 ring-red-600/20", dot: "bg-red-500" },
+  unmarked: { label: "Terminée — Non pointée", className: "bg-slate-100 text-slate-600 ring-slate-500/20", dot: "bg-slate-400" },
+
+
   pending: {
     label: "En attente",
     className: "bg-amber-50 text-amber-700 ring-amber-600/20",
@@ -44,7 +48,7 @@ function dateLabel(value) {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("fr-MA", {
+  return new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca",
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -194,7 +198,7 @@ export default function ReservationsTable({
                     </td>
 
                     <td className="px-4 py-2.5">
-                      <StatusBadge status={reservation.status} />
+                      <StatusBadge status={reservation.display_status || reservation.status} />
                     </td>
 
                     <td className="whitespace-nowrap px-4 py-2.5 text-[13px] font-medium text-slate-700">

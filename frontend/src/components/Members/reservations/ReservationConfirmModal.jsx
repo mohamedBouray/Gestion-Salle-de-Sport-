@@ -4,7 +4,7 @@ import { CheckCircle2, Clock3, LoaderCircle, X } from "lucide-react";
 function formattedDate(value) {
   const date = value ? new Date(value) : null;
   if (!date || Number.isNaN(date.getTime())) return "Date indisponible";
-  return new Intl.DateTimeFormat("fr-MA", {
+  return new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca",
     weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
   }).format(date);
 }

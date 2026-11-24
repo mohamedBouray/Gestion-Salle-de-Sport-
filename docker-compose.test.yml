@@ -1,0 +1,61 @@
+# Standalone test project: never use the development MySQL service or volume.
+name: gym-clean-tests
+services:
+    db-test:
+        image: mysql:8.4
+        environment:
+            MYSQL_DATABASE: academic_db_test
+            MYSQL_USER: academic_test
+            MYSQL_PASSWORD: local-test-only-password
+            MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+        volumes:
+            - mysql_test_data:/var/lib/mysql
+        networks:
+            - isolated-tests
+        healthcheck:
+            test: ["CMD-SHELL", "mysql -h 127.0.0.1 -u academic_test -p\"$$MYSQL_PASSWORD\" academic_db_test -e 'SELECT 1' >/dev/null 2>&1"]
+            interval: 5s
+            timeout: 5s
+            retries: 30
+    backend-test:
+        build: ./backend
+        working_dir: /app
+        environment:
+            APP_ENV: testing
+            APP_DEBUG: "false"
+            APP_KEY: "base64:AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8="
+            APP_URL: http://localhost:8001
+            FRONTEND_URL: http://localhost:3000
+            GYM_TIMEZONE: Africa/Casablanca
+            DB_CONNECTION: mysql
+            DB_HOST: db-test
+            DB_PORT: 3306
+            DB_DATABASE: academic_db_test
+            DB_USERNAME: academic_test
+            DB_PASSWORD: local-test-only-password
+            DB_URL: ""
+            DB_SOCKET: ""
+            SESSION_DRIVER: array
+            CACHE_STORE: array
+            QUEUE_CONNECTION: sync
+            MAIL_MAILER: array
+            RESEND_API_KEY: ""
+            CONTACT_MAIL_ENABLED: "false"
+            SANCTUM_STATEFUL_DOMAINS: localhost:3000,127.0.0.1:3000
+            CORS_ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
+        volumes:
+            - ./backend:/app:ro
+        tmpfs:
+            - /app/storage
+            - /app/bootstrap/cache
+        networks:
+            - isolated-tests
+        depends_on:
+            db-test:
+                condition: service_healthy
+        command: ["sh", "-ec", "mkdir -p storage/app/private storage/app/public storage/framework/cache/data storage/framework/sessions storage/framework/testing storage/framework/views storage/logs; exec php artisan test --do-not-cache-result"]
+networks:
+    isolated-tests:
+        internal: true
+volumes:
+    mysql_test_data:

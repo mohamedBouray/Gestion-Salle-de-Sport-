@@ -1,3 +1,4 @@
+import { gymDateKey, gymLocalDateTime } from "../../../utils/gymDates.js";
 export const ROLE_CONFIG = {
   members: { singular: "membre", plural: "Membres" },
   coaches: { singular: "coach", plural: "Coachs" },
@@ -9,24 +10,13 @@ export const STATUS_META = {
   absent: { label: "Absent", className: "bg-rose-50 text-rose-700 ring-rose-100" },
 };
 
-export function dateKey(value = new Date()) {
-  const d = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (v) => String(v).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
-
-export function localDateTime(value = new Date()) {
-  const d = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (v) => String(v).padStart(2, "0");
-  return `${dateKey(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
+export const dateKey = gymDateKey;
+export const localDateTime = gymLocalDateTime;
 
 export function displayDate(value) {
   if (!value) return "Date inconnue";
-  const d = new Date(`${value}T12:00:00`);
-  return Number.isNaN(d.getTime()) ? value : new Intl.DateTimeFormat("fr-MA", {
+  const d = new Date(`${value}T12:00:00Z`);
+  return Number.isNaN(d.getTime()) ? value : new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca",
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   }).format(d);
 }
@@ -34,7 +24,7 @@ export function displayDate(value) {
 export function displayTime(value) {
   if (!value) return "—";
   const d = new Date(value);
-  return Number.isNaN(d.getTime()) ? "—" : new Intl.DateTimeFormat("fr-MA", {
+  return Number.isNaN(d.getTime()) ? "—" : new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca",
     hour: "2-digit", minute: "2-digit",
   }).format(d);
 }

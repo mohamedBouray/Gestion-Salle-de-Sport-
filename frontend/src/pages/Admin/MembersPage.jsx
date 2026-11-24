@@ -1,3 +1,4 @@
+import { gymDateKey } from "../../utils/gymDates.js";
 import { useEffect, useState } from "react";
 import { Plus, Search, ChevronLeft, ChevronRight, UsersRound, UserRoundCheck, UserRoundX, Clock3, FileSpreadsheet, LoaderCircle} from "lucide-react";
 import MembersTable from "../../components/admin/membre/MembersTable";
@@ -15,7 +16,7 @@ const cards = [
 ];
 
 const statusLabels = { active: "Actif", pending: "En attente", inactive: "Bloqué",};
-const formatDate = (value) => value ? new Date(value).toLocaleDateString("fr-MA") : "";
+const formatDate = (value) => value ? new Date(value).toLocaleDateString("fr-MA", { timeZone: "Africa/Casablanca" }) : "";
 
 export default function MembersPage() {
     const [search, setSearch] = useState("");
@@ -158,7 +159,7 @@ export default function MembersPage() {
         );
     }
 
-    
+
     async function exportExcel() {
         if (exporting) return;
 
@@ -181,7 +182,7 @@ export default function MembersPage() {
             const link = document.createElement("a");
             link.href = url;
 
-            const day = new Date().toISOString().slice(0, 10);
+            const day = gymDateKey();
             link.download = `membres-${day}.xlsx`;
 
             document.body.appendChild(link);

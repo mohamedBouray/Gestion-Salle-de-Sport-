@@ -14,12 +14,12 @@ const sessionLabels = { scheduled: "Programmée", completed: "Terminée", cancel
 const date = (value) => {
     if (!value) return "—";
     const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? "—" : parsed.toLocaleDateString("fr-MA", { day: "2-digit", month: "short", year: "numeric" });
+    return Number.isNaN(parsed.getTime()) ? "—" : parsed.toLocaleDateString("fr-MA", { timeZone: "Africa/Casablanca", day: "2-digit", month: "short", year: "numeric" });
 };
 const time = (value) => {
     if (!value) return "—";
     const parsed = new Date(value);
-    return Number.isNaN(parsed.getTime()) ? "—" : parsed.toLocaleTimeString("fr-MA", { hour: "2-digit", minute: "2-digit" });
+    return Number.isNaN(parsed.getTime()) ? "—" : parsed.toLocaleTimeString("fr-MA", { timeZone: "Africa/Casablanca", hour: "2-digit", minute: "2-digit" });
 };
 
 

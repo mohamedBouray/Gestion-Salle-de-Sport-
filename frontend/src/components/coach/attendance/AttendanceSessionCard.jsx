@@ -13,7 +13,7 @@ const formatDay = (value) => {
 
   return Number.isNaN(date.getTime())
     ? "Date indisponible"
-    : new Intl.DateTimeFormat("fr-MA", {
+    : new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca",
         weekday: "short",
         day: "numeric",
         month: "short",
@@ -25,7 +25,7 @@ const formatTime = (value) => {
 
   return Number.isNaN(date.getTime())
     ? "—"
-    : new Intl.DateTimeFormat("fr-MA", {
+    : new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca",
         hour: "2-digit",
         minute: "2-digit",
       }).format(date);

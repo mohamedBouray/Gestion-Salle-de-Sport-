@@ -9,11 +9,23 @@ class ReservationResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $attendance = in_array($this->attendance_status, ['present', 'absent'], true)
+            ? $this->attendance_status : ($this->status === 'attended' ? 'present' : 'unmarked');
+        $elapsed = $this->relationLoaded('session') && $this->session?->end_at?->lessThanOrEqualTo(now('UTC'));
+        $displayStatus = match (true) {
+            $this->status === 'cancelled' => 'cancelled',
+            $attendance === 'absent' => 'absent',
+            $attendance === 'present' => 'attended',
+            $elapsed && in_array($this->status, ['confirmed', 'pending'], true) => 'unmarked',
+            default => $this->status,
+        };
         return [
             'id' => $this->id,
             'session_id' => $this->session_id,
             'member_id' => $this->member_id,
             'status' => $this->status,
+            'attendance_status' => $attendance,
+            'display_status' => $displayStatus,
             'price_at_booking' => $this->price_at_booking,
             'enrolled_at' => $this->enrolled_at?->toIso8601String(),
             'cancelled_at' => $this->cancelled_at?->toIso8601String(),
@@ -48,7 +60,8 @@ class ReservationResource extends JsonResource
                     'end_at' => $session->end_at?->toIso8601String(),
                     'capacity' => $session->capacity,
                     'location' => $session->location,
-                    'status' => $session->status,
+                    'status' => $session->status === 'scheduled' && $session->end_at?->lessThanOrEqualTo(now('UTC'))
+                        ? 'completed' : $session->status,
                     'course' => $session->relationLoaded('course') && $session->course
                         ? [
                             'id' => $session->course->id,

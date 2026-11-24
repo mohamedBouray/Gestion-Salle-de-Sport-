@@ -93,7 +93,7 @@ class ReservationController extends Controller
     {
         return $request->validate([
             'search' => ['nullable', 'string', 'max:100'],
-            'status' => ['nullable', 'in:pending,confirmed,attended,cancelled'],
+            'status' => ['nullable', 'in:pending,confirmed,attended,cancelled,absent,unmarked'],
             'course_id' => ['nullable', 'integer', 'min:1'],
             'date' => ['nullable', 'date_format:Y-m-d'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],

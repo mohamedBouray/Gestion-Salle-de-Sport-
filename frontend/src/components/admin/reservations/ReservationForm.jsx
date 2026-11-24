@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, Info, LoaderCircle, Search, X } from "lucide-react";
+import { adminApi } from "../../../services/AdminApi";
 
 const fieldClass =
   "mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-[13px] text-slate-700 outline-none transition " +
@@ -13,7 +14,7 @@ function dateLabel(value) {
   if (!value) return "Date non renseignée";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "Date invalide";
-  return new Intl.DateTimeFormat("fr-MA", {
+  return new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca",
     weekday: "short", day: "numeric", month: "short",
     hour: "2-digit", minute: "2-digit",
   }).format(date);
@@ -55,6 +56,25 @@ export default function ReservationForm({
   const [memberId, setMemberId] = useState("");
   const [sessionId, setSessionId] = useState("");
   const [memberSearch, setMemberSearch] = useState("");
+  const [remoteMembers, setRemoteMembers] = useState(null);
+  const [memberSearchError, setMemberSearchError] = useState("");
+  const [selectedMemberRecord, setSelectedMemberRecord] = useState(null);
+  useEffect(() => {
+    const term = memberSearch.trim();
+    setRemoteMembers(null);
+    setMemberSearchError("");
+    if (!term) return;
+    let active = true;
+    const timer = window.setTimeout(async () => {
+      try {
+        const result = await adminApi.members.list({ search: term, status: "active", page: 1, per_page: 50 });
+        if (active) setRemoteMembers(result.members?.data ?? result.members ?? []);
+      } catch {
+        if (active) setMemberSearchError("Recherche serveur indisponible. Réessayez.");
+      }
+    }, 300);
+    return () => { active = false; window.clearTimeout(timer); };
+  }, [memberSearch]);
   const [sessionSearch, setSessionSearch] = useState("");
   const [validationError, setValidationError] = useState("");
 
@@ -68,14 +88,14 @@ export default function ReservationForm({
 
   const filteredMembers = useMemo(() => {
     const term = memberSearch.trim().toLowerCase();
-    return members.filter(
+    return (remoteMembers ?? members).filter(
       (member) =>
         !term ||
         `${member.name || ""} ${member.email || ""} ${member.phone || ""}`
           .toLowerCase()
           .includes(term)
     );
-  }, [members, memberSearch]);
+  }, [members, memberSearch, remoteMembers]);
 
   const filteredSessions = useMemo(() => {
     const term = sessionSearch.trim().toLowerCase();
@@ -87,7 +107,8 @@ export default function ReservationForm({
     });
   }, [sessions, sessionSearch]);
 
-  const selectedMember = members.find((member) => String(member.id) === memberId);
+  const selectedMember = (remoteMembers ?? members).find((member) => String(member.id) === memberId)
+    ?? (String(selectedMemberRecord?.id) === memberId ? selectedMemberRecord : null);
   const selectedSession = sessions.find((session) => String(session.id) === sessionId);
   const remaining = selectedSession ? placesLeft(selectedSession) : null;
   const canSubmit = !saving && !loading && memberId && sessionId && remaining !== 0;
@@ -211,6 +232,8 @@ export default function ReservationForm({
                     value={memberId}
                     onChange={(event) => {
                       setMemberId(event.target.value);
+                      setSelectedMemberRecord(filteredMembers.find((member) => String(member.id) === event.target.value)
+                        ?? (String(selectedMemberRecord?.id) === event.target.value ? selectedMemberRecord : null));
                       setValidationError("");
                     }}
                     className={fieldClass}
@@ -228,7 +251,8 @@ export default function ReservationForm({
                     ))}
                   </select>
 
-                  {members.length === 0 && (
+                  {memberSearchError && <p role="alert" className="mt-1.5 text-xs text-amber-700">{memberSearchError}</p>}
+                  {filteredMembers.length === 0 && (
                     <p className="mt-1.5 text-xs text-amber-700">Aucun membre actif chargé.</p>
                   )}
                 </div>

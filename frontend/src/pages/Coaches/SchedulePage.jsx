@@ -6,7 +6,7 @@ import {
   Badge, dayTime, Empty, ErrorBox, Head, Page, Panel, SearchBox, useLoad, Wait,
 } from "../../components/coach/CoachUI";
 
-const date = (value) => value ? new Intl.DateTimeFormat("fr-MA", { weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(new Date(value)) : "—";
+const date = (value) => value ? new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca", weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(new Date(value)) : "—";
 const isFuture = (value) => Boolean(value) && new Date(value).getTime() >= Date.now();
 
 export default function SchedulePage() {

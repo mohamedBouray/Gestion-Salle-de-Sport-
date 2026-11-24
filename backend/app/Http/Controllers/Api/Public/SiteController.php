@@ -68,7 +68,7 @@ class SiteController extends Controller
         }
 
         return response()->json([
-            'settings' => array_merge($service->all(), [
+            'settings' => array_merge($service->all(public: true), [
                 'featured_coach' => $featured,
                 'classes_items' => $classes,
                 'pricing_plans' => $this->publicPlans(),

@@ -6,7 +6,7 @@ import {
 function displayDate(value) {
   const date = value ? new Date(value) : null;
   if (!date || Number.isNaN(date.getTime())) return "Date indisponible";
-  return new Intl.DateTimeFormat("fr-MA", {
+  return new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca",
     weekday: "short", day: "numeric", month: "short",
   }).format(date);
 }
@@ -14,7 +14,7 @@ function displayDate(value) {
 function displayHour(value) {
   const date = value ? new Date(value) : null;
   if (!date || Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("fr-MA", {
+  return new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca",
     hour: "2-digit", minute: "2-digit",
   }).format(date);
 }

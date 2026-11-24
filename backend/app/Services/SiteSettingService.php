@@ -5,19 +5,28 @@ namespace App\Services;
 use App\Models\SiteSetting;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Throwable;
 
 class SiteSettingService
 {
-    public function all(): array
+    private const PUBLIC_CACHE_KEY = 'gym.public.site-settings.v1';
+
+    private function publicCache()
+    {
+        return Cache::store(app()->environment('testing') ? 'array' : 'file');
+    }
+
+    public function all(bool $public = false): array
     {
         $defaults = collect(config('landing.fields'))
             ->mapWithKeys(fn ($field, $key) => [$key => $field[2]])->all();
 
-        $saved = SiteSetting::whereIn('key', array_keys($defaults))
+        $load = fn () => SiteSetting::whereIn('key', array_keys($defaults))
             ->pluck('value', 'key')->all();
+        $saved = $public ? $this->publicCache()->remember(self::PUBLIC_CACHE_KEY, 30, $load) : $load();
 
         $settings = array_merge($defaults, $saved);
 
@@ -58,6 +67,7 @@ class SiteSettingService
             }
         });
 
+        $this->publicCache()->forget(self::PUBLIC_CACHE_KEY);
         return $this->all();
     }
 
@@ -78,6 +88,8 @@ class SiteSettingService
             Storage::disk('public')->delete($path);
             throw $e;
         }
+
+        $this->publicCache()->forget(self::PUBLIC_CACHE_KEY);
 
         if ($previous && Str::startsWith($previous, 'landing/')) {
             Storage::disk('public')->delete($previous);

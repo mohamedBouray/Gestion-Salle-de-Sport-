@@ -230,7 +230,7 @@ export default function ReservationsPage() {
             <ConfirmDialog
                 open={Boolean(selectedSession)} variant="primary" title="Confirmer votre réservation ?"
                 description="Vérifiez la séance avant de réserver votre place. Les conditions d'abonnement et la capacité sont revérifiées par le serveur."
-                subject={`${selectedSession?.course?.name || "Cours sportif"} · ${selectedSession?.start_at ? new Date(selectedSession.start_at).toLocaleString("fr-MA") : "Séance"}`}
+                subject={`${selectedSession?.course?.name || "Cours sportif"} · ${selectedSession?.start_at ? new Date(selectedSession.start_at).toLocaleString("fr-MA", { timeZone: "Africa/Casablanca" }) : "Séance"}`}
                 subjectLabel="SÉANCE CHOISIE"
                 warning="La réservation est couverte par un abonnement éligible."
                 confirmLabel="Confirmer la réservation" loading={saving} error={selectedSession ? actionError : ""}
@@ -241,7 +241,7 @@ export default function ReservationsPage() {
             <ConfirmDialog
                 open={Boolean(selectedBooking)} variant="danger" title="Annuler votre réservation ?"
                 description="Vous perdrez votre place pour cette séance. L'annulation ne supprime pas l'historique."
-                subject={`${selectedBooking?.session?.course?.name || "Cours sportif"} · ${selectedBooking?.session?.start_at ? new Date(selectedBooking.session.start_at).toLocaleString("fr-MA") : "Séance"}`}
+                subject={`${selectedBooking?.session?.course?.name || "Cours sportif"} · ${selectedBooking?.session?.start_at ? new Date(selectedBooking.session.start_at).toLocaleString("fr-MA", { timeZone: "Africa/Casablanca" }) : "Séance"}`}
                 subjectLabel="RÉSERVATION CONCERNÉE"
                 warning="Annulation possible uniquement avant le début et en l'absence de paiement associé."
                 confirmLabel="Confirmer l'annulation" loading={saving} error={selectedBooking ? actionError : ""}

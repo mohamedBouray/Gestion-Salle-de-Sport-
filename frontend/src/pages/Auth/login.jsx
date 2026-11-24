@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
 export default function Login() {
@@ -7,6 +7,12 @@ export default function Login() {
     const [error , setError] = useState("");
     const [formData, setFormData] = useState({email:"" , password:""});
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const verificationNotice = searchParams.has("verified")
+        ? "Adresse e-mail vérifiée. Vous pouvez vous connecter."
+        : searchParams.has("verify")
+            ? "Vérifiez votre boîte mail. Si nécessaire, connectez-vous pour recevoir un nouveau lien."
+            : "";
     const { login } = useAuth();
 
     const handleChange = (e) => {
@@ -43,7 +49,7 @@ export default function Login() {
 
     return (
         <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-zinc-950 font-sans">
-            
+
             <div  className="absolute inset-0 z-0 bg-[url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop')] bg-cover bg-center opacity-40"></div>
             <div className="absolute inset-0 z-0 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent"></div>
             <div className="absolute top-6 left-6 z-20 animate-fade-in">
@@ -57,7 +63,7 @@ export default function Login() {
             </div>
 
             <div className="relative z-10 w-full max-w-md animate-fade-up rounded-2xl border border-zinc-800 bg-zinc-900/60 p-8 shadow-2xl backdrop-blur-xl">
-                
+
                 {/* Header / Logo */}
                 <div className="mb-8 text-center animate-fade-in delay-100">
                     <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-600 shadow-lg shadow-blue-600/30">
@@ -68,6 +74,9 @@ export default function Login() {
                     <h2 className="text-3xl font-bold tracking-tight text-white">Welcome Back</h2>
                     <p className="mt-2 text-sm text-zinc-400">Sign in to your GYM Management account.</p>
                 </div>
+                {verificationNotice && !error && (
+                    <div role="status" className="mb-4 rounded-lg border border-blue-500/20 bg-blue-500/10 p-3 text-sm text-blue-300">{verificationNotice}</div>
+                )}
                 {error && (
                     <div
                         role="alert"

@@ -1,3 +1,4 @@
+import { gymInstant } from "../../../utils/gymDates.js";
 import FrenchDateInput from "../../shared/FrenchDateInput";
 import { useEffect, useState } from "react";
 import { AlertCircle, CalendarCheck2, Check, LoaderCircle, Search, UserRound, X } from "lucide-react";
@@ -20,6 +21,7 @@ export default function AttendanceForm({ role, mode, record, date, busy, error, 
     return current ? localDateTime(now) : `${initialDate}T09:00`;
   });
   const [note, setNote] = useState("");
+  const [dateError, setDateError] = useState("");
 
   useEffect(() => {
     if (isCheckout || selected) return;
@@ -53,8 +55,13 @@ export default function AttendanceForm({ role, mode, record, date, busy, error, 
     e.preventDefault();
     if (busy) return;
     if (!isCheckout && !person?.id) return;
+    setDateError("");
+    const instant = isAbsent ? null : gymInstant(occurredAt);
+    if (!isAbsent && !Number.isFinite(instant.getTime())) {
+      setDateError("Date invalide ou heure ambiguë au Maroc."); return;
+    }
     const payload = { role, mode, attendance_id: record?.id, person_id: person?.id,
-      date: initialDate, occurred_at: isAbsent ? null : new Date(occurredAt).toISOString(), note: note.trim() };
+      date: initialDate, occurred_at: isAbsent ? null : instant.toISOString(), note: note.trim() };
     await onSubmit(payload);
   }
 
@@ -69,7 +76,7 @@ export default function AttendanceForm({ role, mode, record, date, busy, error, 
           <button type="button" onClick={onClose} disabled={busy} aria-label="Fermer" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50"><X size={19}/></button>
         </header>
         <form onSubmit={submit} className="space-y-4 p-5">
-          {error && <p role="alert" className="flex items-start gap-2 rounded-lg bg-rose-50 p-3 text-xs text-rose-700"><AlertCircle size={16} className="shrink-0"/>{error}</p>}
+          {(error || dateError) && <p role="alert" className="flex items-start gap-2 rounded-lg bg-rose-50 p-3 text-xs text-rose-700"><AlertCircle size={16} className="shrink-0"/>{error || dateError}</p>}
           {!isCheckout && !selected && (
             <div>
               <label htmlFor="attendance-person-search" className="mb-1.5 block text-xs font-bold text-slate-700">Choisir un {label} *</label>

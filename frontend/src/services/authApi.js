@@ -1,5 +1,5 @@
 
-import api, { getCsrfCookie } from "./api";
+import api, { getCsrfCookie, resetCsrfCookie } from "./api";
 
 // ========================================
 // HELPERS
@@ -8,8 +8,12 @@ import api, { getCsrfCookie } from "./api";
 const data = (response) => response.data;
 
 const post = async (url, payload = {}) => {
-    await getCsrfCookie();
-    return api.post(url, payload).then(data);
+    await getCsrfCookie(true);
+    try {
+        return await api.post(url, payload).then(data);
+    } finally {
+        resetCsrfCookie();
+    }
 };
 
 const put = async (url, payload = {}) => {

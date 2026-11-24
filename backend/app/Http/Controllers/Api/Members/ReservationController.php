@@ -21,7 +21,7 @@ class ReservationController extends Controller
     public function index(Request $request): JsonResponse
     {
         $filters = $request->validate([
-            'status' => ['nullable', 'in:pending,confirmed,attended,cancelled'],
+            'status' => ['nullable', 'in:pending,confirmed,attended,cancelled,absent,unmarked'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
             'page' => ['nullable', 'integer', 'min:1'],
         ]);

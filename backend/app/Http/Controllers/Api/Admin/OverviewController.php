@@ -26,7 +26,7 @@ class OverviewController extends Controller
                 'upcoming_sessions' => CourseSession::where('status', 'scheduled')->where('start_at', '>=', now())->count(),
                 'reservations' => CourseEnrollment::whereIn('status', ['pending','confirmed','attended'])->count(),
                 'active_memberships' => MemberSubscription::where('status', 'active')
-                    ->whereDate('starts_at', '<=', today())->whereDate('ends_at', '>=', today())->count(),
+                    ->whereDate('starts_at', '<=', now(config('gym.timezone', 'Africa/Casablanca'))->toDateString())->whereDate('ends_at', '>=', now(config('gym.timezone', 'Africa/Casablanca'))->toDateString())->count(),
                 'paid_revenue' => Payment::where('status', 'paid')->sum('amount'),
                 'new_messages' => ContactMessage::where('status', 'new')->count(),
                 'pending_requests' => PersonalTrainingRequest::where('status', 'pending')->count(),

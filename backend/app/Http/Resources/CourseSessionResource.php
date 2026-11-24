@@ -115,6 +115,7 @@ class CourseSessionResource extends JsonResource
             // =====================================
 
             'enrolled_count' => $enrolledCount,
+            'active_reservation_count' => isset($attributes['active_reservation_count']) ? (int) $attributes['active_reservation_count'] : null,
 
             'remaining_places' => $remainingPlaces,
 

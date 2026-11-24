@@ -68,4 +68,13 @@ class PublicLandingTest extends TestCase
             ->assertJsonCount(0, 'settings.classes_items')
             ->assertJsonCount(0, 'settings.pricing_plans');
     }
+    public function test_public_settings_cache_is_invalidated_after_admin_update(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin', 'status' => 'active']);
+        $this->getJson('/api/site-settings')->assertOk();
+        $this->actingAs($admin)->putJson('/api/admin/site-settings', [
+            'settings' => ['site_name' => 'Bouray Gym Updated'],
+        ])->assertOk();
+        $this->getJson('/api/site-settings')->assertOk()->assertJsonPath('settings.site_name', 'Bouray Gym Updated');
+    }
 }

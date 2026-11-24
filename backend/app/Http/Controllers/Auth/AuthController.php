@@ -10,15 +10,18 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\ServiceUnavailableHttpException;
 
 class AuthController extends Controller
 {
-    
+
     public function register(Request $request)
     {
         abort_unless($request->hasSession(), 419);
 
+        $request->merge(['email' => is_string($request->email) ? Str::lower(trim($request->email)) : $request->email]);
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:160'],
             'email' => [
@@ -104,6 +107,17 @@ class AuthController extends Controller
             );
         }
 
+        if ($user->isMember()) {
+            $sent = $this->sendVerification($user);
+            return response()->json([
+                'message' => $sent ? 'Vérifiez votre adresse e-mail avant de vous connecter.'
+                    : 'Compte créé. Réessayez de vous connecter pour renvoyer le lien de vérification.',
+                'verification_required' => true,
+                'user' => $this->userData($user),
+            ], 201);
+        }
+
+        // The initial administrator is authorized by the setup key, not by email.
         Auth::guard('web')->login($user);
 
         $request->session()->regenerate();
@@ -122,8 +136,9 @@ class AuthController extends Controller
     {
         abort_unless($request->hasSession(), 419);
 
+        $request->merge(['email' => is_string($request->email) ? Str::lower(trim($request->email)) : $request->email]);
         $validated = $request->validate([
-            'email' => 'required|email',
+            'email' => 'required|email|max:190',
             'password' => 'required|string',
             'remember' => 'sometimes|boolean',
         ]);
@@ -145,6 +160,15 @@ class AuthController extends Controller
         if ($user->status !== 'active') {
             return response()->json([
                 'message' => 'Your account is not active.',
+            ], 403);
+        }
+
+        if ($user->isMember() && !$user->hasVerifiedEmail()) {
+            $sent = $this->sendVerification($user);
+            return response()->json([
+                'message' => $sent ? 'Vérifiez votre e-mail. Un lien de vérification est disponible.'
+                    : 'E-mail non vérifié. Vérifiez votre boîte mail ou réessayez dans une minute.',
+                'code' => 'EMAIL_UNVERIFIED',
             ], 403);
         }
 
@@ -193,6 +217,22 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Logout successful',
         ]);
+    }
+
+    private function sendVerification(User $user): bool
+    {
+        $key = 'gym-email-verification:'.$user->id;
+        if (RateLimiter::tooManyAttempts($key, 1)) {
+            return false;
+        }
+        RateLimiter::hit($key, 60);
+        try {
+            $user->sendEmailVerificationNotification();
+            return true;
+        } catch (\Throwable $error) {
+            report($error);
+            return false;
+        }
     }
 
     private function userData(User $user): array

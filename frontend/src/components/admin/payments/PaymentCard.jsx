@@ -33,7 +33,7 @@ function dateLabel(value) {
 
   return Number.isNaN(date.getTime())
     ? "Date indisponible"
-    : new Intl.DateTimeFormat("fr-MA", {
+    : new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca",
         day: "2-digit",
         month: "short",
         year: "numeric",

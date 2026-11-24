@@ -158,7 +158,7 @@ export default function MemberDetails({
                               <Clock3 size={13} />
                               {new Date(session.end_at).toLocaleTimeString(
                                 "fr-MA",
-                                {
+                                { timeZone: "Africa/Casablanca",
                                   hour: "2-digit",
                                   minute: "2-digit",
                                 }

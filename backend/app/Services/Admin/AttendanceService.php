@@ -116,6 +116,15 @@ class AttendanceService
                 ]);
             }
 
+            if ($role === User::MEMBER && !$person->memberSubscriptions()
+                ->where('status', 'active')->where('starts_at', '<=', $day)->where('ends_at', '>=', $day)
+                ->whereHas('plan', fn ($query) => $query->withTrashed()->whereIn('type', ['general', 'course']))
+                ->exists()) {
+                throw ValidationException::withMessages([
+                    'person_id' => 'Ce membre ne possède pas d’abonnement actif et valide à la date de l’entrée.',
+                ]);
+            }
+
             if (GymAttendance::query()
                 ->where('user_id', $person->id)
                 ->where('status', 'present')
@@ -285,7 +294,7 @@ class AttendanceService
     private function parseUtc(string $value, string $field): Carbon
     {
         try {
-            return Carbon::parse($value)->utc();
+            return Carbon::parse($value, config('gym.timezone', 'Africa/Casablanca'))->utc();
         } catch (\Throwable $exception) {
             throw ValidationException::withMessages([
                 $field => 'Date et heure invalides.',

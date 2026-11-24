@@ -42,12 +42,14 @@ class CoachService
 
     public function stats(): array
     {
-        $base = User::query()->where('role', User::COACH);
+        $counts = User::query()->where('role', User::COACH)->toBase()->selectRaw(
+            "COUNT(*) AS total, COUNT(CASE WHEN status = 'active' THEN 1 END) AS active, COUNT(CASE WHEN status = 'pending' THEN 1 END) AS pending, COUNT(CASE WHEN status = 'inactive' THEN 1 END) AS inactive"
+        )->first();
         return [
-            'total' => (clone $base)->count(),
-            'active' => (clone $base)->where('status', 'active')->count(),
-            'pending' => (clone $base)->where('status', 'pending')->count(),
-            'inactive' => (clone $base)->where('status', 'inactive')->count(),
+            'total' => (int) $counts->total,
+            'active' => (int) $counts->active,
+            'pending' => (int) $counts->pending,
+            'inactive' => (int) $counts->inactive,
         ];
     }
 
@@ -161,7 +163,7 @@ class CoachService
                 }
                 $current->save();
 
-                if ($current->status === 'inactive') $current->sessions()->delete();
+                if ($current->status === 'inactive') $this->revokeAccess($current);
 
                 $oldPhoto = $current->coachProfile?->photo;
                 $profile = [];
@@ -196,6 +198,7 @@ class CoachService
             AccountInvitation::where('user_id', $coach->id)
                 ->whereNull('accepted_at')->whereNull('revoked_at')
                 ->update(['revoked_at' => now()]);
+            $this->revokeAccess($coach);
             $coach->coachProfile()->update(['is_featured' => false]);
             $coach->delete();
         });
@@ -205,6 +208,12 @@ class CoachService
     {
         $this->ensureCoach($coach);
         return $this->invitations->send($coach, $admin);
+    }
+
+    private function revokeAccess(User $coach): void
+    {
+        $coach->forceFill(['remember_token' => null])->save();
+        $coach->sessions()->delete();
     }
 
     private function assertNoUpcomingSessions(User $coach): void

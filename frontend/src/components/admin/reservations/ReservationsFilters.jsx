@@ -68,6 +68,8 @@ export default function ReservationsFilters({
         <option value="pending">En attente</option>
         <option value="confirmed">Confirmée</option>
         <option value="attended">Présence enregistrée</option>
+        <option value="absent">Absent(e)</option>
+        <option value="unmarked">Terminée — Non pointée</option>
         <option value="cancelled">Annulée</option>
       </select>
 

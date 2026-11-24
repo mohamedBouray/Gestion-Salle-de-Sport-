@@ -2,6 +2,6 @@
 
 return [
     'timezone' => env('GYM_TIMEZONE', 'Africa/Casablanca'),
-    'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
+    'frontend_url' => env('FRONTEND_URL', 'http://localhost:3000'),
     'invitation_hours' => (int) env('GYM_INVITATION_HOURS', 48),
 ];

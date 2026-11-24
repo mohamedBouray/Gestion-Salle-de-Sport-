@@ -71,7 +71,7 @@ export function AuthProvider({ children }) {
     // REGISTER
     const register = async (formData) => {
         const data = await registerUser(formData);
-        setUser(data.user);
+        setUser(data.verification_required ? null : data.user);
         if (data.user.role === "admin") {
             setIsSetup(true);
         }

@@ -30,16 +30,19 @@ class CourseService
             $query->where('status', $filters['status']);
         }
 
-        $base = Course::query();
+        $counts = Course::query()->toBase()->selectRaw("COUNT(*) AS total,
+            COUNT(CASE WHEN status = 'active' THEN 1 END) AS active,
+            COUNT(CASE WHEN status = 'inactive' THEN 1 END) AS inactive,
+            COUNT(CASE WHEN status = 'pending' THEN 1 END) AS pending")->first();
 
         return [
             'courses' => $query->latest('id')->withCount('sessions')
                 ->paginate($filters['per_page'] ?? 10)->withQueryString(),
             'stats' => [
-                'total' => (clone $base)->count(),
-                'active' => (clone $base)->where('status', 'active')->count(),
-                'inactive' => (clone $base)->where('status', 'inactive')->count(),
-                'pending' => (clone $base)->where('status', 'pending')->count(),
+                'total' => (int) $counts->total,
+                'active' => (int) $counts->active,
+                'inactive' => (int) $counts->inactive,
+                'pending' => (int) $counts->pending,
                 'scheduled_sessions' => CourseSession::query()->where('status', 'scheduled')
                     ->where('start_at', '>=', now('UTC'))->whereHas('course')->count(),
             ],

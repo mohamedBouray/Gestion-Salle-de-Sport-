@@ -36,7 +36,7 @@ function formatDate(value) {
   const date = validDate(value);
   if (!date) return "Non renseignée";
 
-  return new Intl.DateTimeFormat("fr-MA", {
+  return new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
@@ -47,7 +47,7 @@ function formatHour(value) {
   const date = validDate(value);
   if (!date) return "—";
 
-  return new Intl.DateTimeFormat("fr-MA", {
+  return new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca",
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);

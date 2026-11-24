@@ -1,3 +1,4 @@
+import { gymDateKey } from "../../utils/gymDates.js";
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -33,13 +34,7 @@ const FILTERS = [
   ["past", "Passées"],
 ];
 
-function sameDay(dateA, dateB) {
-  return (
-    dateA.getFullYear() === dateB.getFullYear() &&
-    dateA.getMonth() === dateB.getMonth() &&
-    dateA.getDate() === dateB.getDate()
-  );
-}
+function sameDay(a, b) { return gymDateKey(a) === gymDateKey(b); }
 
 function matchesPeriod(session, filter) {
   if (filter === "all") return true;
@@ -328,7 +323,7 @@ export default function AttendancePage() {
           ) : (
             <div className="space-y-3">
               <p className="text-xs text-slate-500">
-                {new Intl.DateTimeFormat("fr-MA", {
+                {new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca",
                   dateStyle: "full",
                   timeStyle: "short",
                 }).format(new Date(selected.start_at))}

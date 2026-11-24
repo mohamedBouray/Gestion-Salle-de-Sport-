@@ -14,7 +14,7 @@ const dots = {
 };
 
 const date = (value) =>
-    value ? new Date(value).toLocaleDateString("fr-MA") : "—";
+    value ? new Date(value).toLocaleDateString("fr-MA", { timeZone: "Africa/Casablanca" }) : "—";
 
 const thClass =
     "px-4 py-3.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500";

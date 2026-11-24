@@ -31,17 +31,17 @@ class ReservationService
         // En revanche, ils respectent recherche/cours/date/séance.
         $statsQuery = clone $query;
 
-        $stats = [
-            'total' => (clone $statsQuery)->count(),
-            'confirmed' => (clone $statsQuery)->where('status', 'confirmed')->count(),
-            'pending' => (clone $statsQuery)->where('status', 'pending')->count(),
-            'cancelled' => (clone $statsQuery)->where('status', 'cancelled')->count(),
-            'attended' => (clone $statsQuery)->where('status', 'attended')->count(),
-        ];
+        $now = now('UTC')->toDateTimeString();
+        $counts = $statsQuery->toBase()->selectRaw("COUNT(*) AS total,
+            COUNT(CASE WHEN status = 'confirmed' AND attendance_status IS NULL AND EXISTS (SELECT 1 FROM course_sessions WHERE course_sessions.id = course_enrollments.session_id AND end_at > ?) THEN 1 END) AS confirmed,
+            COUNT(CASE WHEN status = 'pending' AND attendance_status IS NULL AND EXISTS (SELECT 1 FROM course_sessions WHERE course_sessions.id = course_enrollments.session_id AND end_at > ?) THEN 1 END) AS pending,
+            COUNT(CASE WHEN status = 'cancelled' THEN 1 END) AS cancelled,
+            COUNT(CASE WHEN status <> 'cancelled' AND (attendance_status = 'present' OR (status = 'attended' AND attendance_status IS NULL)) THEN 1 END) AS attended,
+            COUNT(CASE WHEN status <> 'cancelled' AND attendance_status = 'absent' THEN 1 END) AS absent,
+            COUNT(CASE WHEN status IN ('confirmed', 'pending') AND attendance_status IS NULL AND EXISTS (SELECT 1 FROM course_sessions WHERE course_sessions.id = course_enrollments.session_id AND end_at <= ?) THEN 1 END) AS unmarked", [$now, $now, $now])->first();
+        $stats = array_map('intval', (array) $counts);
 
-        if (!empty($filters['status'])) {
-            $query->where('status', $filters['status']);
-        }
+        $this->applyDisplayStatus($query, $filters['status'] ?? null);
 
         return [
             'reservations' => $query
@@ -62,9 +62,7 @@ class ReservationService
         $query = $this->reservationQuery()
             ->where('member_id', $member->id);
 
-        if (!empty($filters['status'])) {
-            $query->where('status', $filters['status']);
-        }
+        $this->applyDisplayStatus($query, $filters['status'] ?? null);
 
         return $query
             ->orderByDesc('enrolled_at')
@@ -77,10 +75,28 @@ class ReservationService
             );
     }
 
+    private function applyDisplayStatus(Builder $query, ?string $status): void
+    {
+        if ($status === 'absent') {
+            $query->where('status', '!=', 'cancelled')->where('attendance_status', 'absent');
+        } elseif ($status === 'unmarked') {
+            $query->whereIn('status', ['confirmed', 'pending'])->whereNull('attendance_status')
+                ->whereHas('session', fn ($q) => $q->where('end_at', '<=', now('UTC')));
+        } elseif (in_array($status, ['confirmed', 'pending'], true)) {
+            $query->where('status', $status)->whereNull('attendance_status')
+                ->whereHas('session', fn ($q) => $q->where('end_at', '>', now('UTC')));
+        } elseif ($status === 'attended') {
+            $query->where('status', '!=', 'cancelled')->where(fn ($q) => $q
+                ->where('attendance_status', 'present')->orWhere(fn ($q) => $q->where('status', 'attended')->whereNull('attendance_status')));
+        } elseif ($status) {
+            $query->where('status', $status);
+        }
+    }
+
     public function show(CourseEnrollment $enrollment): CourseEnrollment
     {
         return $enrollment->load([
-            'member:id,name,email,phone',
+            'member' => fn ($q) => $q->withTrashed()->select('id', 'name', 'email', 'phone'),
             'session.course' => fn ($q) => $q->withTrashed()->select('id', 'name', 'price', 'status'),
             'session.coach:id,name',
         ]);
@@ -89,7 +105,7 @@ class ReservationService
     private function reservationQuery(): Builder
     {
         return CourseEnrollment::query()->with([
-            'member:id,name,email,phone',
+            'member' => fn ($q) => $q->withTrashed()->select('id', 'name', 'email', 'phone'),
             'session.course' => fn ($q) => $q->withTrashed()->select('id', 'name', 'price', 'status'),
             'session.coach:id,name',
         ]);
@@ -343,6 +359,7 @@ class ReservationService
                     'enrolled_at' => now('UTC'),
                     'cancelled_at' => null,
                 ]);
+                $old->forceFill(['attendance_status' => null, 'attendance_marked_at' => null, 'attendance_marked_by_user_id' => null])->save();
                 $enrollment = $old;
             } else {
                 $enrollment = CourseEnrollment::query()->create([

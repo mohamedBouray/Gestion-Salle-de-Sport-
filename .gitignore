@@ -1,5 +1,23 @@
-.env
-.env.*
-!.env.example
+# Secrets (version only the example templates)
+**/.env
+**/.env.*
+!**/.env.example
+**/auth.json
+**/*.key
+**/*.pem
+
+# Dependencies, builds and local metadata
 **/node_modules/
 **/vendor/
+**/dist/
+**/.phpunit.result.cache
+**/.phpunit.cache/
+**/*:Zone.Identifier
+**/Thumbs.db
+**/.DS_Store
+*.log
+*.zip
+*.sql
+/backend/storage/logs/
+/backend/storage/framework/
+/backend/bootstrap/cache/*.php

@@ -1,3 +1,4 @@
+import { gymDateKey } from "../../utils/gymDates.js";
 import { Plus } from "lucide-react";
 
 import SessionCard from "./SessionCard";
@@ -6,22 +7,10 @@ import SessionCard from "./SessionCard";
 // DATE HELPERS
 // ========================================
 
-function dateKey(value) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-
-  return `${year}-${month}-${day}`;
-}
+const dateKey = gymDateKey;
 
 function getDayName(value) {
-  return new Intl.DateTimeFormat("fr-MA", { weekday: "long" }).format(value);
+  return new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca", weekday: "long" }).format(value);
 }
 
 // ========================================
@@ -66,7 +55,7 @@ function DayColumn({
 
           <p className="mt-0.5 flex items-baseline gap-1">
             <span className="text-sm font-bold tabular-nums leading-none">
-              {new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(day)}
+              {new Intl.DateTimeFormat("fr-FR", { timeZone: "Africa/Casablanca", day: "2-digit", month: "2-digit", year: "numeric" }).format(day)}
             </span>
           </p>
         </div>

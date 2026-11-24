@@ -23,6 +23,10 @@ class DashboardService
         $users = DB::table('users')->whereNull('deleted_at');
         $courses = DB::table('courses')->whereNull('deleted_at');
         $payments = DB::table('payments');
+        $userCounts = (clone $users)->selectRaw("COUNT(CASE WHEN role = 'member' THEN 1 END) AS members_total,
+            COUNT(CASE WHEN role = 'member' AND status = 'active' THEN 1 END) AS members_active,
+            COUNT(CASE WHEN role = 'coach' AND status = 'active' THEN 1 END) AS coaches_active")->first();
+        $paymentTotals = $this->paymentTotals(clone $payments);
 
         $sessions = DB::table('course_sessions as s')
             ->join('courses as c', 'c.id', '=', 's.course_id')
@@ -31,17 +35,17 @@ class DashboardService
 
         return [
             'summary' => [
-                'members_total' => (clone $users)->where('role', 'member')->count(),
-                'members_active' => (clone $users)->where('role', 'member')->where('status', 'active')->count(),
-                'coaches_active' => (clone $users)->where('role', 'coach')->where('status', 'active')->count(),
+                'members_total' => (int) $userCounts->members_total,
+                'members_active' => (int) $userCounts->members_active,
+                'coaches_active' => (int) $userCounts->coaches_active,
                 'courses_active' => (clone $courses)->where('status', 'active')->count(),
                 'sessions_upcoming' => (clone $sessions)->where('s.status', 'scheduled')->where('s.start_at', '>', $now)->count(),
                 'reservations_confirmed' => DB::table('course_enrollments')->where('status', 'confirmed')->count(),
                 'visits_today' => DB::table('gym_attendances')->where('role', 'member')->whereIn('status', ['present', 'left'])->whereNotNull('check_in_at')->where('date', $today)->count(),
                 'memberships_active' => DB::table('member_subscriptions')->where('status', 'active')->where('starts_at', '<=', $today)->where('ends_at', '>=', $today)->count(),
-                'simulated_total' => round((float) (clone $payments)->where('method', 'demo')->where('status', 'simulated')->sum('amount'), 2),
-                'revenue_paid' => round((float) (clone $payments)->where('status', 'paid')->sum('amount'), 2),
-                'payments_refunded' => (clone $payments)->where('status', 'refunded')->count(),
+                'simulated_total' => round((float) $paymentTotals->simulated_total, 2),
+                'revenue_paid' => round((float) $paymentTotals->paid_total, 2),
+                'payments_refunded' => (int) $paymentTotals->refunded_count,
                 'proposals_pending' => DB::table('course_proposals')->where('status', 'pending')->count(),
                 'unread_messages' => DB::table('contact_messages')->whereNull('read_at')->count(),
             ],
@@ -128,6 +132,8 @@ class DashboardService
             ->where('user_id', $id)->where('role', 'member')
             ->whereIn('status', ['present', 'left'])->whereNotNull('check_in_at');
         $payments = DB::table('payments')->where('member_id', $id);
+        $paymentTotals = $this->paymentTotals(clone $payments);
+        $visitCounts = (clone $visits)->selectRaw('COUNT(*) AS total, COUNT(CASE WHEN date >= ? AND date <= ? THEN 1 END) AS month_total', [$monthStart, $today])->first();
 
         $upcomingCount = DB::table('course_enrollments as e')
             ->join('course_sessions as s', 's.id', '=', 'e.session_id')
@@ -150,10 +156,10 @@ class DashboardService
                 'active_memberships' => (clone $subscriptions)->where('status', 'active')->where('starts_at', '<=', $today)->where('ends_at', '>=', $today)->count(),
                 'upcoming_reservations' => $upcomingCount,
                 'reservations_total' => (clone $reservations)->count(),
-                'visits_month' => (clone $visits)->where('date', '>=', $monthStart)->where('date', '<=', $today)->count(),
-                'visits_total' => (clone $visits)->count(),
-                'simulated_total' => round((float) (clone $payments)->where('method', 'demo')->where('status', 'simulated')->sum('amount'), 2),
-                'paid_total' => round((float) (clone $payments)->where('status', 'paid')->sum('amount'), 2),
+                'visits_month' => (int) $visitCounts->month_total,
+                'visits_total' => (int) $visitCounts->total,
+                'simulated_total' => round((float) $paymentTotals->simulated_total, 2),
+                'paid_total' => round((float) $paymentTotals->paid_total, 2),
             ],
             'subscription' => [
                 'plan_name' => $subscription?->plan_name,
@@ -175,6 +181,13 @@ class DashboardService
             ],
             'upcoming' => $this->upcoming(memberId: $id),
         ];
+    }
+
+    private function paymentTotals(Builder $query): object
+    {
+        return $query->selectRaw("COALESCE(SUM(CASE WHEN method = 'demo' AND status = 'simulated' THEN amount ELSE 0 END), 0) AS simulated_total,
+            COALESCE(SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END), 0) AS paid_total,
+            COUNT(CASE WHEN status = 'refunded' THEN 1 END) AS refunded_count")->first();
     }
 
     // Date locale de chaque point, avec bornes UTC pour les datetime stockes en UTC.

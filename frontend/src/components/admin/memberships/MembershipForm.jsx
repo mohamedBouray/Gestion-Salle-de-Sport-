@@ -1,3 +1,4 @@
+import { gymDateKey } from "../../../utils/gymDates.js";
 import FrenchDateInput from "../../shared/FrenchDateInput";
 
 import { useEffect, useMemo, useState } from "react";
@@ -8,12 +9,7 @@ import { apiError } from "../../../services/api";
 const control =
   "mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none focus:border-blue-500";
 
-function todayLocal() {
-  const d = new Date();
-  return new Date(
-    d.getTime() - d.getTimezoneOffset() * 60000
-  ).toISOString().slice(0, 10);
-}
+const todayLocal = gymDateKey;
 
 export default function MembershipForm({
   onClose,

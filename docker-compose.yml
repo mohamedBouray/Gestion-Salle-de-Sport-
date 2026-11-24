@@ -20,8 +20,8 @@ services:
         volumes:
             - ./backend:/app
         environment: &backend_environment
-            APP_ENV: local
-            APP_DEBUG: "true"
+            APP_ENV: ${GYM_APP_ENV:-local}
+            APP_DEBUG: ${GYM_APP_DEBUG:-true}
             DB_CONNECTION: mysql
             DB_HOST: db
             DB_PORT: 3306

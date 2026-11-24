@@ -11,7 +11,7 @@ const colors = {
 
 const dotColors = { active: "bg-emerald-500", inactive: "bg-red-500", pending: "bg-amber-500" };
 
-const date = (value) => value ? new Date(value).toLocaleDateString("fr-MA") : "—";
+const date = (value) => value ? new Date(value).toLocaleDateString("fr-MA", { timeZone: "Africa/Casablanca" }) : "—";
 
 const getInitials = (name = "") => {
     const parts = String(name).trim().split(/\s+/).filter(Boolean);

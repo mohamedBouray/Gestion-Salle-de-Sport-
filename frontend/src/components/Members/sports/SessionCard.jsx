@@ -17,7 +17,7 @@ function formatDate(value) {
     return "Date indisponible";
   }
 
-  return new Intl.DateTimeFormat("fr-MA", {
+  return new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca",
     weekday: "short",
     day: "numeric",
     month: "short",
@@ -32,7 +32,7 @@ function formatHour(value) {
 
   if (Number.isNaN(date.getTime())) return "—";
 
-  return new Intl.DateTimeFormat("fr-MA", {
+  return new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca",
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);

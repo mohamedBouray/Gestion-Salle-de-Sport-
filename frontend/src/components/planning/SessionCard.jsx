@@ -49,7 +49,7 @@ function formatTime(value) {
     return "—";
   }
 
-  return new Intl.DateTimeFormat("fr-MA", {
+  return new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca",
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);

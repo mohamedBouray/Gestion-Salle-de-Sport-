@@ -4,6 +4,8 @@ import {
 } from "lucide-react";
 
 const STATUS = {
+  absent: { label: "Absent", className: "bg-red-50 text-red-700 ring-red-600/20", dot: "bg-red-500" },
+  unmarked: { label: "Terminée — Non pointée", className: "bg-slate-100 text-slate-600 ring-slate-500/20", dot: "bg-slate-400" },
   confirmed: { label: "Confirmée", className: "bg-emerald-50 text-emerald-700 ring-emerald-600/20", dot: "bg-emerald-500" },
   pending: { label: "En attente", className: "bg-amber-50 text-amber-700 ring-amber-600/20", dot: "bg-amber-500" },
   attended: { label: "Présence validée", className: "bg-blue-50 text-blue-700 ring-blue-600/20", dot: "bg-blue-500" },
@@ -15,7 +17,7 @@ const gridClass = "grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4";
 function dateLabel(value) {
   const date = value ? new Date(value) : null;
   if (!date || Number.isNaN(date.getTime())) return "Date indisponible";
-  return new Intl.DateTimeFormat("fr-MA", {
+  return new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca",
     weekday: "short", day: "numeric", month: "short", year: "numeric",
   }).format(date);
 }
@@ -23,19 +25,19 @@ function dateLabel(value) {
 function timeLabel(value) {
   const date = value ? new Date(value) : null;
   if (!date || Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("fr-MA", {
+  return new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca",
     hour: "2-digit", minute: "2-digit",
   }).format(date);
 }
 
 function MyReservationCard({ reservation, onCancel, busy }) {
   const session = reservation.session || {};
-  const status = STATUS[reservation.status] || {
+  const status = STATUS[reservation.display_status ?? reservation.status] || {
     label: "Statut inconnu", className: "bg-slate-100 text-slate-600 ring-slate-500/20", dot: "bg-slate-400",
   };
   const starts = session.start_at ? new Date(session.start_at) : null;
   const isFuture = starts && !Number.isNaN(starts.getTime()) && starts.getTime() > Date.now();
-  const canCancel = ["confirmed", "pending"].includes(reservation.status) && isFuture;
+  const canCancel = ["confirmed", "pending"].includes(reservation.display_status ?? reservation.status) && isFuture && session.status === "scheduled";
 
   return (
     <article className="flex h-full min-w-0 flex-col rounded-xl border border-slate-200 bg-white p-4">
@@ -90,7 +92,11 @@ function MyReservationCard({ reservation, onCancel, busy }) {
           <p className="text-center text-xs text-slate-500">
             {reservation.status === "cancelled"
               ? "Réservation annulée"
-              : reservation.status === "attended"
+              : reservation.display_status === "absent"
+                ? "Absence enregistrée par le coach"
+                : reservation.display_status === "unmarked"
+                  ? "Présence non renseignée par le coach"
+                  : reservation.status === "attended"
                 ? "Présence déjà enregistrée"
                 : "Annulation indisponible après le début de la séance"}
           </p>
@@ -121,6 +127,8 @@ export default function MyReservations({
           <option value="confirmed">Confirmées</option>
           <option value="pending">En attente</option>
           <option value="attended">Présences validées</option>
+          <option value="absent">Absences</option>
+          <option value="unmarked">Terminées — Non pointées</option>
           <option value="cancelled">Annulées</option>
         </select>
 

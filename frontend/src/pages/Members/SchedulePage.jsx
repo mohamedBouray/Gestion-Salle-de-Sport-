@@ -87,7 +87,7 @@ export default function SchedulePage() {
         setPage(1);
     }
 
-    const dateLabel = selectedSession?.start_at ? new Intl.DateTimeFormat("fr-MA", { dateStyle: "medium", timeStyle: "short" }).format(new Date(selectedSession.start_at)) : "";
+    const dateLabel = selectedSession?.start_at ? new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca", dateStyle: "medium", timeStyle: "short" }).format(new Date(selectedSession.start_at)) : "";
 
     return (
         <main className="min-h-full bg-slate-50 px-4 py-5 sm:px-6">

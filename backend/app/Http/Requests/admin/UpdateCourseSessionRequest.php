@@ -164,8 +164,8 @@ class UpdateCourseSessionRequest extends FormRequest
                 return;
             }
 
-            $startDate = Carbon::parse($start);
-            $endDate = Carbon::parse($end);
+            $startDate = Carbon::parse($start, config('gym.timezone', 'Africa/Casablanca'));
+            $endDate = Carbon::parse($end, config('gym.timezone', 'Africa/Casablanca'));
 
             if ($endDate->lessThanOrEqualTo($startDate)) {
                 $validator->errors()->add('end_at', 'La date de fin doit être après la date de début.');

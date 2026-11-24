@@ -22,7 +22,7 @@ function displayDate(value) {
 
   return Number.isNaN(date.getTime())
     ? "—"
-    : new Intl.DateTimeFormat("fr-MA", {
+    : new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca",
         day: "2-digit",
         month: "short",
         year: "numeric",

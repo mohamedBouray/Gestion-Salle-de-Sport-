@@ -67,7 +67,7 @@ class CoachCoursePlanningController extends Controller
             'to' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:from'],
         ]);
 
-        $timezone = config('app.timezone', 'UTC');
+        $timezone = config('gym.timezone', 'Africa/Casablanca');
         $today = now($timezone);
         $from = Carbon::parse($filters['from'] ?? $today->copy()->subDays(30)->toDateString(), $timezone)->startOfDay();
         $to = Carbon::parse($filters['to'] ?? $today->copy()->addDays(60)->toDateString(), $timezone)->endOfDay();

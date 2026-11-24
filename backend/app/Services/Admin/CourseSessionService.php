@@ -60,6 +60,7 @@ class CourseSessionService
                 'coach:id,name,status',
             ])
             ->withCount([
+                'enrollments as active_reservation_count' => fn ($q) => $q->whereIn('status', self::ACTIVE_ENROLLMENT_STATUSES),
                 'enrollments as enrolled_count' => fn ($q) =>
                     $q->whereIn(
                         'status',
@@ -94,8 +95,8 @@ class CourseSessionService
     public function create(array $data): CourseSession
     {
         return $this->synchronized(function () use ($data) {
-            $start = Carbon::parse($data['start_at'])->utc();
-            $end = Carbon::parse($data['end_at'])->utc();
+            $start = Carbon::parse($data['start_at'], config('gym.timezone', 'Africa/Casablanca'))->utc();
+            $end = Carbon::parse($data['end_at'], config('gym.timezone', 'Africa/Casablanca'))->utc();
 
             $courseId = (int) $data['course_id'];
             $coachId = (int) $data['coach_id'];
@@ -197,7 +198,7 @@ class CourseSessionService
                 return $this->hydrate($current);
             }
 
-            if ($current->start_at->isPast()) {
+            if ($current->start_at->lessThanOrEqualTo(now('UTC'))) {
                 throw ValidationException::withMessages([
                     'start_at' =>
                         'Les horaires et informations d’une séance commencée ne peuvent plus être modifiés.',
@@ -213,11 +214,11 @@ class CourseSessionService
             );
 
             $start = Carbon::parse(
-                $data['start_at'] ?? $current->start_at
+                $data['start_at'] ?? $current->start_at, config('gym.timezone', 'Africa/Casablanca')
             )->utc();
 
             $end = Carbon::parse(
-                $data['end_at'] ?? $current->end_at
+                $data['end_at'] ?? $current->end_at, config('gym.timezone', 'Africa/Casablanca')
             )->utc();
 
             $capacity = (int) (
@@ -234,6 +235,15 @@ class CourseSessionService
 
             $this->assertActiveCourse($courseId);
             $this->assertActiveCoach($coachId);
+
+            // The session row is locked, as in ReservationService::book().
+            if (((int) $current->course_id !== $courseId || (int) $current->coach_id !== $coachId
+                || !$current->start_at->equalTo($start) || !$current->end_at->equalTo($end))
+                && $current->enrollments()->whereIn('status', self::ACTIVE_ENROLLMENT_STATUSES)->exists()) {
+                throw ValidationException::withMessages([
+                    'start_at' => 'Cette séance possède des réservations actives : cours, coach et horaires sont verrouillés.',
+                ]);
+            }
 
             // Capacité minimum selon les réservations
             $enrolled = $this->occupiedCount($current);
@@ -299,26 +309,22 @@ class CourseSessionService
             ]);
         }
 
-        if ($session->start_at->isPast()) {
+        if ($session->start_at->lessThanOrEqualTo(now('UTC'))) {
             throw ValidationException::withMessages([
                 'status' =>
                     'Impossible d’annuler une séance déjà commencée.',
             ]);
         }
 
-        $hasReservations = $session->enrollments()
-            ->whereIn(
-                'status',
-                self::ACTIVE_ENROLLMENT_STATUSES
-            )
-            ->exists();
-
-        if ($hasReservations) {
+        $reservations = $session->enrollments()->whereIn('status', self::ACTIVE_ENROLLMENT_STATUSES);
+        if ((clone $reservations)->where(function ($query) {
+            $query->where('price_at_booking', '>', 0)->orWhereHas('payments')->orWhere('status', 'attended');
+        })->exists()) {
             throw ValidationException::withMessages([
-                'status' =>
-                    'Cette séance possède des réservations actives. Traitez-les avant de l’annuler.',
+                'status' => 'Des réservations avec historique financier ou présence nécessitent un traitement manuel.',
             ]);
         }
+        $reservations->update(['status' => 'cancelled', 'cancelled_at' => now('UTC')]);
 
         $session->update([
             'status' => 'cancelled',
@@ -555,7 +561,7 @@ class CourseSessionService
         foreach (['start_at', 'end_at'] as $field) {
             if (
                 array_key_exists($field, $data) &&
-                Carbon::parse($data[$field])->utc()->timestamp !==
+                Carbon::parse($data[$field], config('gym.timezone', 'Africa/Casablanca'))->utc()->timestamp !==
                 $session->{$field}->copy()->utc()->timestamp
             ) {
                 return true;
@@ -579,6 +585,7 @@ class CourseSessionService
                 'coach:id,name,status',
             ])
             ->loadCount([
+                'enrollments as active_reservation_count' => fn ($q) => $q->whereIn('status', self::ACTIVE_ENROLLMENT_STATUSES),
                 'enrollments as enrolled_count' => fn ($q) =>
                     $q->whereIn(
                         'status',

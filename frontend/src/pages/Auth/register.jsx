@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 
- 
+
 export default function Register() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState("");
@@ -15,14 +15,14 @@ export default function Register() {
         password: "",
         password_confirmation: "",
     });
-   
+
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
 
- 
+
 const handleRegister = async (e) => {
     e.preventDefault();
 
@@ -32,6 +32,10 @@ const handleRegister = async (e) => {
     try {
         const user = await register(formData);
 
+        if (user.role === "member" && !user.email_verified_at) {
+            navigate("/login?verify=1", { replace: true });
+            return;
+        }
         navigate(`/${user.role}/dashboard`, {
             replace: true,
         });
@@ -53,13 +57,13 @@ const handleRegister = async (e) => {
 
 
 
-   
+
 
     return (
         <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-zinc-950 font-sans">
             <div className="absolute inset-0 z-0 bg-[url('https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop')] bg-cover bg-center opacity-40"></div>
             <div className="absolute inset-0 z-0 bg-gradient-to-t from-zinc-950 via-zinc-950/80 to-transparent"></div>
-            
+
             <div className="absolute top-6 left-6 z-20 animate-fade-in">
                 <button onClick={() => navigate("/")} className="group flex items-center gap-2 px-4 py-2 text-sm font-medium text-zinc-300 transition-all hover:text-white cursor-pointer">
                     <svg className="h-4 w-4 transition-transform group-hover:-translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -107,7 +111,7 @@ const handleRegister = async (e) => {
                         <input type="password" minLength={8} id="password" name="password" value={formData.password} onChange={handleChange} placeholder="••••••••" autoComplete="new-password"
                             className="w-full rounded-lg border border-zinc-700 bg-zinc-800/50 px-4 py-2.5 text-sm text-white placeholder-zinc-500 transition-all focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" required />
                     </div>
-                    
+
                     <div>
                         <label htmlFor="password_confirmation"
                             className="mb-1.5 block text-sm text-zinc-300">

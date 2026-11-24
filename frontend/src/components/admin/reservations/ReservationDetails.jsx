@@ -2,6 +2,10 @@ import { useEffect } from "react";
 import { X } from "lucide-react";
 
 const statuses = {
+    absent: { label: "Absent(e)", badge: "bg-red-50 text-red-700 ring-red-600/20" },
+    unmarked: { label: "Terminée — Non pointée", badge: "bg-slate-100 text-slate-600 ring-slate-500/20" },
+
+
     pending: { label: "En attente", badge: "bg-amber-50 text-amber-700 ring-amber-600/20" },
     confirmed: { label: "Confirmée", badge: "bg-emerald-50 text-emerald-700 ring-emerald-600/20" },
     attended: { label: "Présent(e)", badge: "bg-blue-50 text-blue-700 ring-blue-600/20" },
@@ -12,7 +16,7 @@ function dateLabel(value, options = {}) {
     if (!value) return "—";
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "—";
-    return new Intl.DateTimeFormat("fr-MA", {
+    return new Intl.DateTimeFormat("fr-MA", { timeZone: "Africa/Casablanca",
         day: "numeric", month: "long", year: "numeric", ...options,
     }).format(date);
 }
@@ -64,8 +68,9 @@ export default function ReservationDetails({ reservation, onClose, onCancel }) {
     const session = reservation.session ?? reservation.course_session ?? {};
     const course = session.course ?? reservation.course ?? {};
     const coach = session.coach ?? reservation.coach ?? {};
-    const status = statuses[reservation.status] || {
-        label: reservation.status || "Inconnu",
+    const displayStatus = reservation.display_status || reservation.status;
+    const status = statuses[displayStatus] || {
+        label: displayStatus || "Inconnu",
         badge: "bg-slate-100 text-slate-600 ring-slate-500/20",
     };
 

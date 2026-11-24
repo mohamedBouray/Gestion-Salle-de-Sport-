@@ -6,7 +6,7 @@ import { adminApi } from "../../../services/AdminApi";
 import { apiError } from "../../../services/api";
 
 const date = (value) =>
-    value ? new Date(value).toLocaleDateString("fr-MA") : "—";
+    value ? new Date(value).toLocaleDateString("fr-MA", { timeZone: "Africa/Casablanca" }) : "—";
 
 const money = (value) =>
     value == null ? "—" : `${Number(value).toFixed(2)} MAD`;
