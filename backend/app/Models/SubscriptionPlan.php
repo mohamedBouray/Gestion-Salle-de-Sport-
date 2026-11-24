@@ -18,7 +18,6 @@ class SubscriptionPlan extends Model
         'name',
         'type',
         'course_id',
-        'coach_id',
         'duration_value',
         'duration_unit',
         'price',
@@ -35,11 +34,6 @@ class SubscriptionPlan extends Model
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class, 'course_id');
-    }
-
-    public function coach(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'coach_id');
     }
 
     public function subscriptions(): HasMany

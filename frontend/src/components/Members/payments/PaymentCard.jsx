@@ -38,7 +38,6 @@ const METHODS = {
 const TYPES = {
   subscription: "Abonnement",
   course: "Cours sportif",
-  personal: "Séance privée",
 };
 
 function displayDate(value) {
@@ -70,10 +69,6 @@ function paymentTitle(payment) {
       payment.enrollment?.session?.course?.name ||
       "Réservation de cours"
     );
-  }
-
-  if (payment.type === "personal") {
-    return "Séance de coaching personnel";
   }
 
   return "Paiement";

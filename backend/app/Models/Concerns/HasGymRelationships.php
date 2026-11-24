@@ -6,11 +6,10 @@ use App\Models\AccountInvitation;
 use App\Models\CoachAvailability;
 use App\Models\Course;
 use App\Models\CourseEnrollment;
+use App\Models\CourseProposal;
 use App\Models\CourseSession;
 use App\Models\MemberSubscription;
 use App\Models\Payment;
-use App\Models\PersonalTrainingRequest;
-use App\Models\SubscriptionPlan;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -75,24 +74,14 @@ trait HasGymRelationships
         return $this->hasMany(CoachAvailability::class, 'coach_id');
     }
 
-    public function personalPlans(): HasMany
-    {
-        return $this->hasMany(SubscriptionPlan::class, 'coach_id');
-    }
-
     public function memberSubscriptions(): HasMany
     {
         return $this->hasMany(MemberSubscription::class, 'member_id');
     }
 
-    public function personalTrainingRequests(): HasMany
+    public function courseProposals(): HasMany
     {
-        return $this->hasMany(PersonalTrainingRequest::class, 'member_id');
-    }
-
-    public function receivedPersonalTrainingRequests(): HasMany
-    {
-        return $this->hasMany(PersonalTrainingRequest::class, 'coach_id');
+        return $this->hasMany(CourseProposal::class, 'coach_id');
     }
 
     public function payments(): HasMany

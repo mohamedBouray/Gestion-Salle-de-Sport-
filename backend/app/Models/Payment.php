@@ -16,7 +16,6 @@ class Payment extends Model
         'member_id',
         'subscription_id',
         'enrollment_id',
-        'personal_session_id',
         'recorded_by_user_id',
         'amount',
         'method',
@@ -47,16 +46,11 @@ class Payment extends Model
         return $this->belongsTo(CourseEnrollment::class, 'enrollment_id');
     }
 
-    public function personalSession(): BelongsTo
-    {
-        return $this->belongsTo(PersonalSession::class, 'personal_session_id');
-    }
-
     public function recordedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recorded_by_user_id');
     }
 
-    // Exactly ONE of subscription_id / enrollment_id / personal_session_id
+    // Exactly ONE of subscription_id / enrollment_id
     // must be set by the validated controller or service (not by Eloquent).
 }

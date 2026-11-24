@@ -1,4 +1,5 @@
 import test from 'node:test';
+import assert from "node:assert/strict";
 import { gymDateKey, gymLocalDateTime, gymInstant, addCalendarDays } from '../src/utils/gymDates.js';
 test('Moroccan date and local time are independent of device timezone', () => {
   assert.equal(gymLocalDateTime('2026-11-24T14:00:00Z'), '2026-11-24T14:00');

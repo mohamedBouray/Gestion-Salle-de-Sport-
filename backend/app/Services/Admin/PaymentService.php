@@ -352,7 +352,6 @@ class PaymentService
                         $subscription->id,
 
                     'enrollment_id' => null,
-                    'personal_session_id' => null,
 
                     'recorded_by_user_id' =>
                         $admin->id,

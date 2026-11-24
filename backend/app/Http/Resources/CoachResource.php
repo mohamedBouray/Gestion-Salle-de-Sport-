@@ -31,10 +31,7 @@ class CoachResource extends JsonResource
             ],
             'coached_courses_count' => $this->whenCounted('coachedCourses'),
             'coached_sessions_count' => $this->whenCounted('coachedSessions'),
-            'received_requests_count' => $this->when(
-                isset($this->received_personal_training_requests_count),
-                fn () => (int) $this->received_personal_training_requests_count
-            ),
+            'course_proposals_count' => $this->whenCounted('courseProposals'),
             'coach_availabilities' => $this->whenLoaded('coachAvailabilities', fn () =>
                 $this->coachAvailabilities->map(fn ($slot) => [
                     'id' => $slot->id,

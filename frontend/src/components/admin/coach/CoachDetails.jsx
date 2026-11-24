@@ -147,7 +147,7 @@ export default function CoachDetails({ coachId, onClose }) {
                             <div className="grid grid-cols-3 gap-2">
                                 <Counter title="Cours" value={coach.coached_courses_count} icon={Dumbbell} />
                                 <Counter title="Séances" value={coach.coached_sessions_count} icon={CalendarDays} />
-                                <Counter title="Demandes" value={coach.received_requests_count} icon={UserRoundCheck} />
+                                <Counter title="Propositions" value={coach.course_proposals_count} icon={UserRoundCheck} />
                             </div>
 
                             {/* Availabilities */}

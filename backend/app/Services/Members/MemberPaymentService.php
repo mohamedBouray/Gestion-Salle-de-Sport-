@@ -183,9 +183,6 @@ $payments = $query
             $row->enrollment_id !== null =>
                 'course',
 
-            $row->personal_session_id !== null =>
-                'personal',
-
             default => 'other',
         };
 

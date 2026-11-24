@@ -42,7 +42,7 @@ class CoachController extends Controller
                     'coach_availabilities' => $coach->coachAvailabilities,
                     'coached_courses_count' => $coach->coached_courses_count,
                     'coached_sessions_count' => $coach->coached_sessions_count,
-                    'received_requests_count' => $coach->received_personal_training_requests_count,
+                    'course_proposals_count' => $coach->course_proposals_count,
                 ]
             ),
         ]);

@@ -22,7 +22,7 @@ class DatabaseSeeder extends Seeder
     {
         $password = (string) env('GYM_DEMO_PASSWORD', '');
         if (!app()->environment(['local', 'testing']) || strlen($password) < 8 || strlen($password) > 72) {
-            throw new RuntimeException('Utilisez local/testing et GYM_DEMO_PASSWORD (12 à 72 octets).');
+            throw new RuntimeException('Utilisez local/testing et GYM_DEMO_PASSWORD (8 à 72 octets).');
         }
 
         DB::transaction(function () use ($password): void {
@@ -66,7 +66,7 @@ class DatabaseSeeder extends Seeder
                 $coach->coachProfile()->create([
                     'specialty' => $specialty, 'experience_years' => $experience,
                     'bio' => "Coach spécialisé en $specialty, accompagnement adapté à chaque niveau.",
-                    'is_featured' => $i < 2,
+                    'is_featured' => $i === 0,
                 ]);
                 if ($status === 'active') {
                     // Four teaching days, matching the seeded session dates.

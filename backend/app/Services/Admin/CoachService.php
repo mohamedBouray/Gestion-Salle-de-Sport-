@@ -68,7 +68,7 @@ class CoachService
     {
         $this->ensureCoach($coach);
         return $coach->load(['coachProfile', 'coachAvailabilities'])
-            ->loadCount(['coachedCourses', 'coachedSessions', 'receivedPersonalTrainingRequests']);
+            ->loadCount(['coachedCourses', 'coachedSessions', 'courseProposals']);
     }
 
     public function create(array $data, User $admin, ?UploadedFile $photo = null): array

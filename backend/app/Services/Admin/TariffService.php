@@ -194,8 +194,6 @@ class TariffService
                     ? (int) $data['course_id']
                     : null,
 
-            'coach_id' => null,
-
             'duration_value' =>
                 (int) $data['duration_value'],
 

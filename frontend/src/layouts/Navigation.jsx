@@ -125,16 +125,6 @@ export const ROLE_CONFIG = {
     },
 };
 
-/*
- * Sections désactivées (à réactiver si besoin, ajouter ListTodo / BarChart3 aux imports) :
- *
- * admin  → COACHING PERSONNEL : link("Demandes privées", "/admin/personal-requests", ListTodo),
- *                               link("Séances privées", "/admin/private-sessions", CalendarDays)
- * admin  → ANALYSE            : link("Statistiques", "/admin/analytics", BarChart3)
- * coach  → MON ACTIVITÉ       : link("Demandes", "/coach/tasks", ListTodo)
- * member → MON SPORT          : link("Demandes privées", "/member/requests", ListTodo)
- */
-
 // ─────────────── Helpers ───────────────
 
 export function getRoleConfig(role) {
